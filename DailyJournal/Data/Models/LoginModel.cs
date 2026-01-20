@@ -1,29 +1,15 @@
-﻿namespace DailyJournal.Data.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace DailyJournal.Data.Models
 {
     public class LoginModel
     {
+        [Required(ErrorMessage = "Username is required")]
         public string Username { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Password is required")]
         public string Password { get; set; } = string.Empty;
-        public string PIN { get; set; } = string.Empty;
-        public bool RememberMe { get; set; } = false;
-        public bool UseBiometric { get; set; } = false;
 
-        // Validation
-        public bool IsValid => !string.IsNullOrWhiteSpace(Username) &&
-                              (!string.IsNullOrWhiteSpace(Password) || !string.IsNullOrWhiteSpace(PIN));
-
-        public string ValidationMessage
-        {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(Username))
-                    return "Username is required";
-
-                if (string.IsNullOrWhiteSpace(Password) && string.IsNullOrWhiteSpace(PIN))
-                    return "Password or PIN is required";
-
-                return string.Empty;
-            }
-        }
+        public bool RememberMe { get; set; } = false; // Check if this line exists!
     }
 }

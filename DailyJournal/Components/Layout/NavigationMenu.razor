@@ -1,0 +1,140 @@
+﻿@inject NavigationManager Navigation
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">
+            <span class="bi bi-journal-bookmark-fill me-2"></span> Daily Journal
+        </a>
+        <button class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@(_collapseNavMenu ? "collapse" : null) nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-section-label px-3 pt-3 pb-1 text-muted small text-uppercase fw-bold">Journal</div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-speedometer2 nav-icon"></span> Dashboard
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="today">
+                <span class="bi bi-pencil-square nav-icon"></span> Today's Entry
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="calendar">
+                <span class="bi bi-calendar3 nav-icon"></span> Calendar
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="entries">
+                <span class="bi bi-book nav-icon"></span> All Entries
+            </NavLink>
+        </div>
+
+        <div class="nav-section-label px-3 pt-3 pb-1 text-muted small text-uppercase fw-bold">Organization</div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="tags">
+                <span class="bi bi-tags nav-icon"></span> Tags & Categories
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="search">
+                <span class="bi bi-search nav-icon"></span> Search
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="moods">
+                <span class="bi bi-emoji-smile nav-icon"></span> Mood Tracking
+            </NavLink>
+        </div>
+
+        <div class="nav-section-label px-3 pt-3 pb-1 text-muted small text-uppercase fw-bold">Insights</div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="statistics">
+                <span class="bi bi-graph-up nav-icon"></span> Statistics
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="reports">
+                <span class="bi bi-file-earmark-bar-graph nav-icon"></span> Reports
+            </NavLink>
+        </div>
+
+        <hr class="mx-3 my-2 opacity-10" />
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="settings">
+                <span class="bi bi-gear nav-icon"></span> Settings
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="profile">
+                <span class="bi bi-person-circle nav-icon"></span> Profile
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="export">
+                <span class="bi bi-box-arrow-up nav-icon"></span> Export Data
+            </NavLink>
+        </div>
+
+        <div class="mt-auto pb-3">
+            <div class="nav-item px-3">
+                <button class="nav-link btn-logout w-100 border-0 text-start" @onclick="Logout">
+                    <span class="bi bi-door-open nav-icon"></span> Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool _collapseNavMenu = true;
+
+    private void ToggleNavMenu() => _collapseNavMenu = !_collapseNavMenu;
+
+    private void Logout()
+    {
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}
+
+<style>
+    .nav-icon {
+        width: 1.5rem;
+        margin-right: 0.75rem;
+        display: inline-block;
+        text-align: center;
+    }
+
+    .nav-link {
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        border-radius: 4px;
+        color: #d1d1d1;
+    }
+
+        .nav-link:hover {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .nav-link.active {
+            background-color: #0d6efd;
+            color: white !important;
+        }
+
+    .btn-logout {
+        background: transparent;
+        color: #ff6b6b !important;
+    }
+
+        .btn-logout:hover {
+            background-color: rgba(255, 107, 107, 0.1) !important;
+        }
+</style>

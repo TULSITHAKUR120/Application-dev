@@ -9,25 +9,27 @@ namespace DailyJournal.Data.Entities
         public int Id { get; set; }
 
         [Required]
-        [MaxLength(100)]
+        [MaxLength(50)]
         public string Username { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(255)]
-        public string PasswordHash { get; set; } = string.Empty;
-
-        [MaxLength(10)]
-        public string? PIN { get; set; }
+        [EmailAddress]
+        [MaxLength(100)]
+        public string Email { get; set; } = string.Empty;
 
         [Required]
-        public string Salt { get; set; } = string.Empty;
+        [MaxLength(256)]
+        public string PasswordHash { get; set; } = string.Empty;
+
+        [MaxLength(256)]
+        public string? PIN { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? LastLoginAt { get; set; }
 
-        [Required]
+        public bool IsActive { get; set; } = true;
         public bool IsDarkTheme { get; set; } = false;
 
         [MaxLength(7)]
@@ -36,7 +38,7 @@ namespace DailyJournal.Data.Entities
         [MaxLength(7)]
         public string SecondaryColor { get; set; } = "#FF9800";
 
-        [Required]
-        public bool EnableBiometric { get; set; } = false;
+        // Navigation property
+        public virtual UserSettings UserSettings { get; set; } = null!;
     }
 }

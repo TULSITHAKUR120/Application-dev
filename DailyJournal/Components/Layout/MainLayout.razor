@@ -2,12 +2,17 @@
 
 <div class="page">
     <div class="sidebar">
-        <NavMenu />
+        <NavigationMenu />
     </div>
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <div class="user-info">
+                <span class="bi bi-bell me-3 position-relative">
+                    <span class="notification-dot"></span>
+                </span>
+                <span class="username">Welcome, User!</span>
+            </div>
         </div>
 
         <article class="content px-4">
@@ -15,3 +20,75 @@
         </article>
     </main>
 </div>
+
+<style>
+    .page {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .sidebar {
+        width: 280px;
+        background-color: #212529;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        overflow-y: auto;
+    }
+
+    main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        background-color: #fcfcfc;
+    }
+
+    .top-row {
+        height: 3.5rem;
+        background-color: #ffffff;
+        border-bottom: 1px solid #e5e5e5;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        color: #444;
+        font-weight: 500;
+    }
+
+    .notification-dot {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        height: 8px;
+        width: 8px;
+        background-color: #dc3545;
+        border-radius: 50%;
+    }
+
+    .content {
+        padding-top: 2rem;
+    }
+
+    /* Mobile Adaptations */
+    @@media (max-width: 767.98px) {
+        .page {
+            flex-direction: column;
+        }
+
+        .sidebar {
+            width: 100%;
+            height: auto;
+            position: relative;
+        }
+
+        .top-row {
+            justify-content: center;
+        }
+    }
+</style>
