@@ -1,18 +1,27 @@
 ﻿@inherits LayoutComponentBase
+@using Microsoft.Maui.Storage
+@inject NavigationManager Navigation
 
 <div class="page">
     <div class="sidebar">
-        <NavigationMenu />
+
+        @if (IsLoggedIn)
+        {
+        <NavMenu />
+            
+        }
+        else
+        {
+            <ul class="sidebar-links">
+                <li><a href="/login">Login</a></li>
+                <li><a href="/register">Register</a></li>
+            </ul>
+        }
     </div>
 
     <main>
         <div class="top-row px-4">
-            <div class="user-info">
-                <span class="bi bi-bell me-3 position-relative">
-                    <span class="notification-dot"></span>
-                </span>
-                <span class="username">Welcome, User!</span>
-            </div>
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
         <article class="content px-4">
@@ -21,74 +30,22 @@
     </main>
 </div>
 
-<style>
-    .page {
-        display: flex;
-        flex-direction: row;
+@code {
+    private bool IsLoggedIn = false;
+
+    protected override void OnInitialized()
+    {
+        int userId = Preferences.Get("UserId", 0); // Get stored user ID
+        IsLoggedIn = userId != 0;
     }
 
-    .sidebar {
-        width: 280px;
-        background-color: #212529;
-        height: 100vh;
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-        overflow-y: auto;
+    private void Logout()
+    {
+        // Remove stored login info
+        Preferences.Remove("UserId");
+        Preferences.Remove("UserName");
+
+        // Redirect to login page
+        Navigation.NavigateTo("/login", true);
     }
-
-    main {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        background-color: #fcfcfc;
-    }
-
-    .top-row {
-        height: 3.5rem;
-        background-color: #ffffff;
-        border-bottom: 1px solid #e5e5e5;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-    }
-
-    .user-info {
-        display: flex;
-        align-items: center;
-        color: #444;
-        font-weight: 500;
-    }
-
-    .notification-dot {
-        position: absolute;
-        top: -2px;
-        right: -2px;
-        height: 8px;
-        width: 8px;
-        background-color: #dc3545;
-        border-radius: 50%;
-    }
-
-    .content {
-        padding-top: 2rem;
-    }
-
-    /* Mobile Adaptations */
-    @@media (max-width: 767.98px) {
-        .page {
-            flex-direction: column;
-        }
-
-        .sidebar {
-            width: 100%;
-            height: auto;
-            position: relative;
-        }
-
-        .top-row {
-            justify-content: center;
-        }
-    }
-</style>
+}

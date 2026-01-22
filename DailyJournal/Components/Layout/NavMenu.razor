@@ -1,222 +1,59 @@
-﻿@* <div class="top-row ps-3 navbar navbar-dark">
+﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Daily Journal</a>
-        <button class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+        <a class="navbar-brand" href="">DailyJournal</a>
     </div>
 </div>
 
-<div class="@(_collapseNavMenu ? "collapse" : null)" @onclick="() => _collapseNavMenu = true">
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-speedometer2 nav-icon" aria-hidden="true"></span> Dashboard
+                <span class="bi bi-speedometer2" aria-hidden="true"></span> Dashboard
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="journal">
+                <span class="bi bi-pencil-square" aria-hidden="true"></span> CRUD Journal
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="today">
-                <span class="bi bi-pencil-square nav-icon" aria-hidden="true"></span> Today's Entry
+                <span class="bi bi-pencil-square" aria-hidden="true"></span> Today's Journal
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="my-journals">
+                <span class="bi bi-pencil-square" aria-hidden="true"></span> My Journals
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="calendar">
-                <span class="bi bi-calendar3 nav-icon" aria-hidden="true"></span> Calendar
+                <span class="bi bi-calendar3" aria-hidden="true"></span> Calendar View
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="entries">
-                <span class="bi bi-journal-text nav-icon" aria-hidden="true"></span> Journal Entries
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="search">
-                <span class="bi bi-search nav-icon" aria-hidden="true"></span> Search
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="moods">
-                <span class="bi bi-emoji-smile nav-icon" aria-hidden="true"></span> Mood Tracking
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="tags">
-                <span class="bi bi-tags nav-icon" aria-hidden="true"></span> Tags & Categories
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="statistics">
-                <span class="bi bi-graph-up nav-icon" aria-hidden="true"></span> Statistics
-            </NavLink>
-        </div>
-
-        <hr class="nav-divider" />
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="settings">
-                <span class="bi bi-gear nav-icon" aria-hidden="true"></span> Settings
+            <NavLink class="nav-link" href="timeline">
+                <span class="bi bi-view-stacked" aria-hidden="true"></span> Timeline
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="export">
-                <span class="bi bi-download nav-icon" aria-hidden="true"></span> Export
+                <span class="bi bi-file-earmark-pdf-fill" aria-hidden="true"></span> Export PDF
             </NavLink>
         </div>
 
+        <hr class="text-white mx-3" />
+
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="help">
-                <span class="bi bi-question-circle nav-icon" aria-hidden="true"></span> Help & Guide
+            <NavLink class="nav-link" href="settings">
+                <span class="bi bi-gear-fill" aria-hidden="true"></span> Settings
             </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="profile">
-                <span class="bi bi-person nav-icon" aria-hidden="true"></span> Profile
-            </NavLink>
-        </div>
-
-        <hr class="nav-divider" />
-
-        <div class="nav-item px-3">
-            <a class="nav-link logout-link" href="/logout" @onclick="Logout">
-                <span class="bi bi-box-arrow-right nav-icon" aria-hidden="true"></span> Logout
-            </a>
         </div>
     </nav>
 </div>
-
-@code {
-    private bool _collapseNavMenu = true;
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
-
-    private void ToggleNavMenu()
-    {
-        _collapseNavMenu = !_collapseNavMenu;
-    }
-
-    private async Task Logout()
-    {
-        // Add logout logic here
-        Navigation.NavigateTo("/login", forceLoad: true);
-    }
-}
-
-<style>
-    /* Navigation Styles */
-    .navbar {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1rem 0;
-    }
-
-    .navbar-brand {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: white;
-    }
-
-    .navbar-toggler {
-        border: none;
-        background: transparent;
-        padding: 0.25rem 0.5rem;
-        cursor: pointer;
-    }
-
-    .navbar-toggler-icon {
-        display: inline-block;
-        width: 1.5em;
-        height: 1.5em;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: contain;
-    }
-
-    .flex-column {
-        display: flex;
-        flex-direction: column;
-        padding: 1rem 0;
-        background-color: #f8f9fa;
-        min-height: calc(100vh - 60px);
-    }
-
-    .nav-item {
-        margin-bottom: 0.25rem;
-    }
-
-    .nav-link {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem 1rem;
-        color: #495057;
-        text-decoration: none;
-        transition: all 0.2s ease;
-        border-radius: 0.375rem;
-        margin: 0 0.5rem;
-    }
-
-        .nav-link:hover {
-            background-color: #e9ecef;
-            color: #007bff;
-            text-decoration: none;
-        }
-
-        .nav-link.active {
-            background-color: #007bff;
-            color: white !important;
-            font-weight: 500;
-        }
-
-    /* Updated Icon Styling */
-    .nav-icon {
-        font-size: 1.1rem;
-        margin-right: 0.85rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 1.5rem;
-    }
-
-    .nav-divider {
-        margin: 1rem 0;
-        border: 0;
-        border-top: 1px solid rgba(0, 0, 0, 0.1);
-        width: 90%;
-        align-self: center;
-    }
-
-    .logout-link {
-        color: #dc3545 !important;
-    }
-
-        .logout-link:hover {
-            background-color: #ffeaea !important;
-            color: #dc3545 !important;
-        }
-
-    .collapse:not(.show) {
-        display: none;
-    }
-
-    @@media (min-width: 768px) {
-        .navbar-toggler {
-            display: none;
-        }
-
-        .collapse:not(.show) {
-            display: block;
-        }
-
-        .flex-column {
-            width: 250px;
-            border-right: 1px solid #dee2e6;
-        }
-    }
-</style> *@

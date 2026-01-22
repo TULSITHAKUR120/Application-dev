@@ -1,62 +1,60 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using DailyJournal.Data.Entities;
+using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace DailyJournal.Data.Models
 {
     public class JournalEntryModel
     {
         public int Id { get; set; }
-        public DateTime EntryDate { get; set; }
-        public string Title { get; set; } = "Untitled Entry";
+
+        [Required(ErrorMessage = "Title is required")]
+        [MaxLength(200, ErrorMessage = "Title cannot exceed 200 characters")]
+        public string Title { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Content is required")]
         public string Content { get; set; } = string.Empty;
-        public string ContentPreview { get; set; } = string.Empty;
-        public bool IsRichText { get; set; } = true;
 
-        // Formatted dates for UI
-        public string DisplayDate => EntryDate.ToString("dddd, MMMM d, yyyy");
-        public string ShortDate => EntryDate.ToString("MMM d, yyyy");
-        public string MonthYear => EntryDate.ToString("MMMM yyyy");
-        public string DayOfWeek => EntryDate.ToString("dddd");
-        public string DayNumber => EntryDate.Day.ToString();
+        [Required(ErrorMessage = "Primary mood is required")]
+        public string PrimaryMood { get; set; } = string.Empty;
 
-        // Moods
-        public MoodModel PrimaryMood { get; set; } = new();
-        public MoodModel? SecondaryMood1 { get; set; }
-        public MoodModel? SecondaryMood2 { get; set; }
+        public string? SecondaryMood1 { get; set; }
+        public string? SecondaryMood2 { get; set; }
+        public string? Category { get; set; }
+        public string? Tags { get; set; }
+        public bool IsFavorite { get; set; }
+        public DateTime EntryDate { get; set; } = DateTime.Today;
 
-        // Category
-        public CategoryModel? Category { get; set; }
-
-        // Tags
-        public List<TagModel> Tags { get; set; } = new();
-
-        // Metadata
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
-        public string LastUpdated => UpdatedAt.ToString("MMM d, yyyy h:mm tt");
-        public int WordCount { get; set; }
-        public int CharacterCount { get; set; }
-
-        // UI Properties
-        public bool IsSelected { get; set; }
-        public bool IsExpanded { get; set; }
-        public bool IsToday => EntryDate.Date == DateTime.Today;
-        public bool HasEntry => !string.IsNullOrWhiteSpace(Content);
-
-        // Navigation helpers
-        public bool HasSecondaryMoods => SecondaryMood1 != null || SecondaryMood2 != null;
-        public string MoodSummary =>
-            $"{PrimaryMood.Name}" +
-            $"{(SecondaryMood1 != null ? $", {SecondaryMood1.Name}" : "")}" +
-            $"{(SecondaryMood2 != null ? $", {SecondaryMood2.Name}" : "")}";
-
-        // Color based on mood type
-        public string MoodColor => PrimaryMood?.MoodType switch
+        // Helper method to create model from entity
+        public static JournalEntryModel FromEntity(JournalEntry entity)
         {
-            "Positive" => "#4CAF50",
-            "Neutral" => "#FF9800",
-            "Negative" => "#F44336",
-            _ => "#9E9E9E"
-        };
+            return new JournalEntryModel
+            {
+                Id = entity.Id,
+                Title = entity.Title,
+                Content = entity.Content,
+                PrimaryMood = entity.PrimaryMood,
+                SecondaryMood1 = entity.SecondaryMood1,
+                SecondaryMood2 = entity.SecondaryMood2,
+                Category = entity.Category,
+                Tags = entity.Tags,
+                IsFavorite = entity.IsFavorite,
+                EntryDate = entity.EntryDate
+            };
+        }
+
+        // Helper method to update entity from model
+        public void UpdateEntity(JournalEntry entity)
+        {
+            entity.Title = Title;
+            entity.Content = Content;
+            entity.PrimaryMood = PrimaryMood;
+            entity.SecondaryMood1 = SecondaryMood1;
+            entity.SecondaryMood2 = SecondaryMood2;
+            entity.Category = Category;
+            entity.Tags = Tags;
+            entity.IsFavorite = IsFavorite;
+            entity.UpdatedAt = DateTime.UtcNow;
+        }
     }
 }

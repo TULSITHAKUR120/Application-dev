@@ -1,0 +1,1067 @@
+﻿@page "/journal"
+@page "/journal/{Date:datetime}"
+@using DailyJournal.Services
+@using DailyJournal.Data.Constants
+@using DailyJournal.Data.Models
+@using DailyJournal.Data.Entities
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using Markdig
+@using Microsoft.JSInterop
+@inject JournalService JournalService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<style>
+    :root {
+        --lavender-50: #F8F6FF;
+        --lavender-100: #F3E8FF;
+        --lavender-200: #E9D8FF;
+        --lavender-300: #D8B4FE;
+        --lavender-500: #7C3AED;
+        --lavender-600: #6D28D9;
+        --muted-700: #4B5563;
+        --danger-50: #FFF1F2;
+    }
+
+    /* Page */
+    .journal-page {
+        min-height: 100vh;
+        background: var(--lavender-50);
+        padding: 2rem 1rem;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        color: #111827;
+    }
+
+    /* Card */
+    .journal-card {
+        max-width: 980px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+        padding: 1.5rem;
+    }
+
+    .journal-header h1 {
+        font-weight: 700;
+        font-size: 1.75rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .journal-header p {
+        margin: 0;
+        color: var(--muted-700);
+    }
+
+    /* Form controls (Bootstrap .form-control base + lavender customizations) */
+    .form-control.custom-input,
+    .form-select.custom-input {
+        border: 1px solid #E6E2F8;
+        border-radius: 8px;
+        padding: 0.625rem 0.75rem;
+        transition: box-shadow .15s ease, border-color .15s ease, transform .05s;
+        background: #fff;
+        color: #0F172A;
+        box-shadow: none;
+    }
+
+        .form-control.custom-input:focus,
+        .form-select.custom-input:focus {
+            outline: none;
+            border-color: var(--lavender-500);
+            box-shadow: 0 6px 18px rgba(124,58,237,0.08), 0 0 0 4px rgba(124,58,237,0.08);
+        }
+
+        .form-control.custom-input:hover,
+        .form-select.custom-input:hover {
+            border-color: var(--lavender-200);
+        }
+
+    /* Buttons */
+    .btn-lav {
+        background: linear-gradient(180deg, var(--lavender-500), var(--lavender-600));
+        border: none;
+        color: #fff;
+        padding: 0.6rem 1rem;
+        border-radius: 10px;
+        box-shadow: 0 6px 18px rgba(124,58,237,0.12);
+        transition: transform .06s ease, box-shadow .12s ease, opacity .12s ease;
+    }
+
+        .btn-lav:hover {
+            transform: translateY(-1px);
+            background: linear-gradient(180deg, var(--lavender-600), #5b21d0);
+        }
+
+        .btn-lav:disabled,
+        .btn-lav[disabled] {
+            background: var(--lavender-100);
+            color: rgba(0,0,0,0.35);
+            box-shadow: none;
+            cursor: not-allowed;
+            opacity: 0.9;
+        }
+
+    .btn-secondary-muted {
+        background: #F3F4F6;
+        color: #374151;
+        border-radius: 10px;
+        padding: 0.55rem 0.9rem;
+        border: 1px solid rgba(15,23,42,0.04);
+    }
+
+    .btn-danger {
+        background: linear-gradient(180deg, #EF4444, #DC2626);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 0.55rem 0.9rem;
+    }
+
+    /* Editor area (mirror + textarea) */
+    .editor-wrapper {
+        position: relative;
+    }
+
+    .editor-mirror {
+        position: absolute;
+        inset: 0;
+        padding: 0.75rem 0.9rem;
+        border-radius: 8px;
+        min-height: 220px;
+        max-height: 480px;
+        overflow: auto;
+        pointer-events: none;
+        background: var(--lavender-100);
+        color: #0F172A;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Segoe UI Mono", monospace;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+        border: 1px solid rgba(124,58,237,0.08);
+    }
+
+    .editor-placeholder {
+        color: #6B7280;
+        font-style: italic;
+    }
+
+    .editor-mirror strong,
+    .editor-mirror b {
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .editor-mirror em,
+    .editor-mirror i {
+        font-style: italic;
+    }
+
+    .editor-textarea {
+        position: relative;
+        z-index: 2;
+        background: transparent;
+        border: 1px solid transparent;
+        padding: 0.75rem 0.9rem;
+        min-height: 220px;
+        max-height: 480px;
+        width: 100%;
+        resize: vertical;
+        outline: none;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Segoe UI Mono", monospace;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        color: transparent; /* hide raw markdown visually */
+        caret-color: #111827;
+    }
+
+        .editor-textarea:focus {
+            box-shadow: 0 6px 18px rgba(124,58,237,0.06);
+        }
+
+    .editor-mirror pre {
+        background: rgba(255,255,255,0.6);
+        padding: 0.5rem;
+        border-radius: 6px;
+        overflow: auto;
+    }
+
+    /* Preview area (when using full preview) */
+    .preview-area {
+        background: var(--lavender-100);
+        border: 1px solid rgba(124,58,237,0.06);
+        border-radius: 8px;
+        padding: 1rem;
+        min-height: 220px;
+        max-height: 480px;
+        overflow: auto;
+    }
+
+    /* Tags (pills) */
+    .tag-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        background: var(--lavender-500);
+        color: #fff;
+        padding: 0.25rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        border: 1px solid rgba(255,255,255,0.06);
+    }
+
+        .tag-pill .remove-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.95);
+            padding: 0;
+            margin-left: .25rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+    /* Popular tags */
+    .popular-tag {
+        background: rgba(124,58,237,0.08);
+        color: var(--lavender-600);
+        padding: 0.25rem 0.6rem;
+        border-radius: 999px;
+        border: 1px solid rgba(124,58,237,0.06);
+        font-size: 0.85rem;
+    }
+
+    /* Validation messages */
+    .validation-message {
+        color: #DC2626;
+        font-size: 0.85rem;
+        margin-top: .35rem;
+    }
+
+    /* Footer actions */
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        margin-top: 1.25rem;
+        border-top: 1px solid rgba(15,23,42,0.04);
+        padding-top: 1rem;
+    }
+
+    /* Modal overlays (simple custom) */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(2,6,23,0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1050;
+        padding: 1rem;
+    }
+
+    .modal-card {
+        width: 100%;
+        max-width: 520px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(2,6,23,0.2);
+        overflow: hidden;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+        .cursor-pointer:hover {
+            text-decoration: underline;
+        }
+
+
+
+</style>
+
+<div class="journal-page">
+    <div class="journal-card">
+        <div class="journal-header mb-4">
+            <h1>@(IsEditing ? "Edit Journal Entry" : "New Journal Entry")</h1>
+
+            @if (!IsEditingDate)
+            {
+                <p class="small text-muted cursor-pointer"
+                   @onclick="EnableDateEdit"
+                   title="Click to edit date">
+                    <i class="bi bi-calendar3 me-2"></i>
+                    @Date.ToString("dddd, MMMM d, yyyy")
+                </p>
+            }
+            else
+            {
+                <InputDate @bind-Value="Date"
+                           class="form-control form-control-sm d-inline-block w-auto"
+                           @onblur="DisableDateEdit" />
+            }
+        </div>
+
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="mb-3 p-3" style="background:var(--danger-50); border-radius:8px; border:1px solid rgba(239,68,68,0.08);">
+                <div class="d-flex align-items-start gap-2">
+                    <i class="bi bi-exclamation-triangle text-danger me-2" style="font-size:1.15rem"></i>
+                    <div class="small text-danger">@ErrorMessage</div>
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(SuccessMessage))
+        {
+            <div class="mb-3 p-3" style="background:#ECFDF5; border-radius:8px; border:1px solid rgba(34,197,94,0.08);">
+                <div class="d-flex align-items-start gap-2">
+                    <i class="bi bi-check-circle text-success me-2" style="font-size:1.15rem"></i>
+                    <div class="small text-success">@SuccessMessage</div>
+                </div>
+            </div>
+        }
+        <br />
+        
+    
+
+        <EditForm Model="@Model" OnValidSubmit="@HandleSubmit">
+            <DataAnnotationsValidator />
+
+            <div class="row gy-3">
+                <!-- Title -->
+                <div class="col-12">
+                    <label class="form-label small fw-semibold">Title <span class="text-danger">*</span></label>
+                    <InputText @bind-Value="Model.Title" class="form-control custom-input" placeholder="What's on your mind today?" />
+                    <ValidationMessage For="@(() => Model.Title)" class="validation-message" />
+                </div>
+
+                <!-- Content -->
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label small fw-semibold mb-0">Content <span class="text-danger">*</span></label>
+                        <button type="button" class="btn btn-sm btn-link text-decoration-none" @onclick="TogglePreview">
+                            @if (ShowPreview)
+                            {
+                                <i class="bi bi-pencil-square me-1"></i>
+                                @* Edit *@
+                                                        }
+                            else
+                            {
+                                <i class="bi bi-eye me-1"></i>
+                                @* Preview *@
+                                                        }
+                        </button>
+                    </div>
+
+                    @if (!ShowPreview)
+                    {
+                        <div class="mb-2 p-2" style="border-radius:8px; background: rgba(124,58,237,0.03); border:1px solid rgba(124,58,237,0.04);">
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="toolbar-btn" @onclick="@(() => InsertFormatting("**", "**"))">
+                                    <i class="bi bi-type-bold me-1"></i>Bold
+                                </button>
+                                <button type="button" class="toolbar-btn" @onclick="@(() => InsertFormatting("*", "*"))">
+                                    <i class="bi bi-type-italic me-1"></i>Italic
+                                </button>
+                                <button type="button" class="toolbar-btn" @onclick="@(() => InsertHeading(1))">H1</button>
+                                <button type="button" class="toolbar-btn" @onclick="@(() => InsertHeading(2))">H2</button>
+                                <button type="button" class="toolbar-btn" @onclick="InsertList">List</button>
+                                <button type="button" class="toolbar-btn" @onclick="InsertLink">Link</button>
+                                <button type="button" class="toolbar-btn" @onclick="InsertCode">Code</button>
+                                <button type="button" class="toolbar-btn" @onclick="@(() => ShowCheatSheet = true)">
+                                    <i class="bi bi-question-circle me-1"></i>Guide
+                                </button>
+                            </div>
+
+                            <style>
+                                .toolbar-btn {
+                                    background: linear-gradient(135deg, #4F46E5, #3B82F6); /* gradient blue */
+                                    color: #fff; /* white text */
+                                    border: none;
+                                    padding: 0.35rem 0.75rem;
+                                    border-radius: 0.375rem;
+                                    font-size: 0.875rem;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 0.25rem;
+                                    transition: transform 0.15s ease, box-shadow 0.15s ease;
+                                }
+
+                                    .toolbar-btn:hover {
+                                        transform: scale(1.05);
+                                        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+                                    }
+
+                                    .toolbar-btn i {
+                                        color: #fff; /* ensure icons are white */
+                                    }
+                            </style>
+
+                        </div>
+
+                        <div class="editor-wrapper">
+                            <div @ref="mirrorRef" class="editor-mirror">
+                                @if (string.IsNullOrWhiteSpace(Model.Content))
+                                {
+                                    <div class="editor-placeholder">Write your thoughts here... Markdown is supported.</div>
+                                }
+                                else
+                                {
+                                    @((MarkupString)Markdig.Markdown.ToHtml(Model.Content ?? ""))
+                                }
+                            </div>
+
+                            <textarea @ref="textAreaRef"
+                                      @bind="Model.Content"
+                                      @bind:event="oninput"
+                                      class="form-control editor-textarea"
+                                      placeholder="Write your thoughts here... Markdown is supported."></textarea>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="preview-area">
+                            @if (string.IsNullOrWhiteSpace(Model.Content))
+                            {
+                                <p class="text-muted fst-italic mb-0">Nothing to preview. Start writing!</p>
+                            }
+                            else
+                            {
+                                @((MarkupString)Markdig.Markdown.ToHtml(Model.Content ?? ""))
+                            }
+                        </div>
+                    }
+
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <ValidationMessage For="@(() => Model.Content)" class="validation-message" />
+                        <div class="small text-muted"><i class="bi bi-fonts me-1"></i>@WordCount words</div>
+                    </div>
+                </div>
+             
+                <!-- Moods -->
+                <div class="col-10 border-1" style=" z-index:1000;">
+                    <div class="flex gx-3 gap-5 border-1">
+                        <div class="col-md-4 mb-3 text-black">
+                            <label class="form-label small fw-semibold text-black">Primary Mood <span class="text-danger">*</span></label>
+                            <InputSelect @bind-Value="Model.PrimaryMood" class="form-select custom-select">
+                                <option value="">Select a mood</option>
+                                <optgroup label="😊 Positive">
+                                    @foreach (var mood in Moods.Positive.GetAll())
+                                    {
+                                        <option value="@mood">@mood</option>
+                                    }
+                                </optgroup>
+                                <optgroup label="😐 Neutral">
+                                    @foreach (var mood in Moods.Neutral.GetAll())
+                                    {
+                                        <option value="@mood">@mood</option>
+                                    }
+                                </optgroup>
+                                <optgroup label="😔 Negative">
+                                    @foreach (var mood in Moods.Negative.GetAll())
+                                    {
+                                        <option value="@mood">@mood</option>
+                                    }
+                                </optgroup>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => Model.PrimaryMood)" class="validation-message text-danger small mt-1" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label small fw-semibold  text-black">Secondary Mood 1</label>
+                            <InputSelect @bind-Value="Model.SecondaryMood1" class="form-select custom-select">
+                                <option value="">None</option>
+                                @foreach (var mood in AllMoods)
+                                {
+                                    <option value="@mood">@mood</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label small fw-semibold  text-black">Secondary Mood 2</label>
+                            <InputSelect @bind-Value="Model.SecondaryMood2" class="form-select custom-select">
+                                <option value="">None</option>
+                                @foreach (var mood in AllMoods)
+                                {
+                                    <option value="@mood">@mood</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+                </div>
+
+                <style>
+                    /* Modern White Select with Hover Scale */
+                    .custom-select {
+                        background-color: #fff; /* white background */
+                        color: #000; /* black text for readability */
+                        border: 1px solid #ccc; /* subtle border */
+                        border-radius: 0.5rem;
+                        padding: 0.5rem 0.75rem;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+                        transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+                        appearance: none; /* remove default arrow styling */
+                    }
+
+                        .custom-select option {
+                            color: #000; /* keep dropdown options black */
+                        }
+
+                        .custom-select:focus {
+                            outline: none;
+                            border-color: #8B5CF6; /* lavender accent on focus */
+                            transform: scale(1.02);
+                            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+                        }
+
+                        .custom-select:hover {
+                            transform: scale(1.02);
+                            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+                        }
+
+                    /* White labels */
+                    .form-label.text-white {
+                        color: #fff !important;
+                    }
+                </style>
+
+
+                <!-- Category & Tags -->
+                <div class="col-12">
+                    <div class="row gx-3">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label small fw-semibold">Category</label>
+                            <InputText @bind-Value="Model.Category" class="form-control custom-input" placeholder="e.g., Work, Health, Personal" />
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label small fw-semibold">Tags</label>
+                            <div class="d-flex gap-2 mb-2">
+                                <input type="text" @bind="NewTag" @onkeydown="HandleTagInput" class="form-control custom-input" placeholder="Add tags (press Enter)" />
+                                <button type="button" class="btn btn-lav" @onclick="AddTag" title="Add tag"><i class="bi bi-plus-lg"></i></button>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var tag in SelectedTags)
+                                {
+                                    <span class="tag-pill">
+                                        @tag
+                                        <button type="button" class="remove-btn" @onclick="@(() => RemoveTag(tag))" aria-label="Remove tag">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </span>
+                                }
+                            </div>
+
+                            @if (SelectedTags.Count == 0)
+                            {
+                                <div class="mt-2 small text-muted">
+                                    Popular tags:
+                                    <div class="d-flex gap-2 mt-1 flex-wrap">
+                                        @foreach (var tag in PopularTags.Take(5))
+                                        {
+                                            <button type="button" class="popular-tag" @onclick="@(() => AddTagDirect(tag))">@tag</button>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Favorite -->
+                <div class="col-12">
+                    <div class="form-check">
+                        <InputCheckbox @bind-Value="Model.IsFavorite" class="form-check-input" id="favoriteToggle" />
+                        <label class="form-check-label small ms-2" for="favoriteToggle">
+                            <i class="bi bi-star @(Model.IsFavorite ? "bi-star-fill text-warning" : "text-muted") me-1"></i>
+                            Mark as favorite
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="col-12">
+                    <div class="actions">
+                        <button type="submit" class="btn-lav" disabled="@IsLoading">
+                            @if (IsLoading)
+                            {
+                                <i class="bi bi-arrow-clockwise me-2 animate-spin"></i>
+                                <span>@(IsEditing ? "Updating..." : "Saving...")</span>
+                            }
+                            else
+                            {
+                                <i class="bi @(IsEditing ? "bi-check-circle" : "bi-save") me-2"></i>
+                                <span>@(IsEditing ? "Update Entry" : "Save Entry")</span>
+                            }
+                        </button>
+
+                        @if (IsEditing)
+                        {
+                            <button type="button" class="btn-danger" @onclick="@(() => ShowDeleteModal = true)"><i class="bi bi-trash me-2"></i>Delete</button>
+                        }
+
+                        <button type="button" class="btn btn-secondary-muted" @onclick="NavigateToDashboard">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (ShowDeleteModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-card">
+            <div class="p-4">
+                <div class="d-flex align-items-center mb-3">
+                    <div style="width:56px;height:56px;border-radius:999px;background:#FFF1F2;display:flex;align-items:center;justify-content:center;margin-right:12px">
+                        <i class="bi bi-exclamation-triangle text-danger" style="font-size:1.25rem"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0">Delete Entry</h5>
+                        <div class="small text-muted">This action cannot be undone</div>
+                    </div>
+                </div>
+
+                <p class="mb-3">Are you sure you want to delete the entry "<strong>@Model.Title</strong>" from <strong>@Date.ToString("MMMM d, yyyy")</strong>?</p>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-secondary-muted flex-fill" @onclick="@(() => ShowDeleteModal = false)">Cancel</button>
+                    <button class="btn-danger flex-fill" @onclick="HandleDelete" disabled="@IsLoading">
+                        @if (IsLoading)
+                        {
+                            <i class="bi bi-arrow-clockwise me-2 animate-spin"></i>
+                                        }
+                        else
+                        {
+                                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Markdown Cheat Sheet Modal -->
+@if (ShowCheatSheet)
+{
+    <div class="modal-overlay">
+        <div class="modal-card" style="max-width:800px;">
+            <div class="p-4 border-bottom" style="display:flex;justify-content:space-between;align-items:center">
+                <h5 class="mb-0">Markdown Guide</h5>
+                <button class="btn btn-link" @onclick="@(() => ShowCheatSheet = false)"><i class="bi bi-x-lg"></i></button>
+            </div>
+
+            <div class="p-4" style="max-height:60vh;overflow:auto">
+                <div class="row gy-3">
+                    <div class="col-md-6">
+                        <h6>Text Formatting</h6>
+                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                            <code>**Bold**</code> — <strong>Bold</strong>
+                        </div>
+                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                            <code>*Italic*</code> — <em>Italic</em>
+                        </div>
+                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                            <code>~~Strike~~</code> — <span style="text-decoration:line-through">Strikethrough</span>
+                        </div>
+
+                        <h6 class="mt-3">Headings</h6>
+                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                            <code># Heading 1</code><h3 class="mt-1 mb-0">Heading 1</h3>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h6>Lists & Code</h6>
+                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                            <code>- Item 1</code><br />
+                            <code>- Item 2</code>
+                            <ul class="mt-1">
+                                <li>Item 1</li>
+                                <li>Item 2</li>
+                            </ul>
+                        </div>
+
+                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                            <code>`inline code`</code> — <code>inline code</code>
+                        </div>
+
+                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                            <pre>```<br>code block<br>```</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3" style="border-top:1px solid rgba(15,23,42,0.04);background:var(--lavender-50)">
+                <button class="btn-lav w-100" @onclick="@(() => ShowCheatSheet = false)">Got it!</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool IsEditingDate = false;
+
+    private void EnableDateEdit()
+    {
+        IsEditingDate = true;
+    }
+
+    private void DisableDateEdit()
+    {
+        IsEditingDate = false;
+    }
+    [Parameter]
+    public DateTime Date { get; set; } = DateTime.Today;
+
+    private JournalEntryModel Model = new();
+    private List<string> SelectedTags = new();
+    private string NewTag = "";
+    private bool IsLoading = false;
+    private bool IsEditing = false;
+    private bool ShowDeleteModal = false;
+    private bool ShowPreview = false;
+    private bool ShowCheatSheet = false;
+    private string ErrorMessage = "";
+    private string SuccessMessage = "";
+    private ElementReference textAreaRef;
+    private ElementReference mirrorRef;
+
+    private List<string> AllMoods = Moods.GetAllMoods();
+    private List<string> PopularTags = new()
+    {
+        "Work", "Health", "Travel", "Fitness", "Personal Growth",
+        "Family", "Friends", "Reading", "Exercise", "Learning"
+    };
+
+    private int WordCount => string.IsNullOrWhiteSpace(Model.Content) ? 0 :
+        Model.Content.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExistingEntry();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadExistingEntry();
+    }
+
+    private async Task LoadExistingEntry()
+    {
+        try
+        {
+            IsLoading = true;
+            var userId = 1; // Get from authentication in production
+
+            var existingEntry = await JournalService.GetEntryByDateAsync(userId, Date);
+
+            if (existingEntry != null)
+            {
+                IsEditing = true;
+                Model = JournalEntryModel.FromEntity(existingEntry);
+                SelectedTags = existingEntry.GetTagsList();
+            }
+            else
+            {
+                IsEditing = false;
+                Model = new JournalEntryModel { EntryDate = Date };
+                SelectedTags = new List<string>();
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Error loading entry. Please try again.";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        IsLoading = true;
+        ErrorMessage = "";
+        SuccessMessage = "";
+
+        try
+        {
+            var userId = 1; // Get from auth in production
+
+            // Update tags from selected list
+            Model.Tags = string.Join(",", SelectedTags);
+            Model.EntryDate = Date;
+
+            JournalResult result;
+
+            if (IsEditing)
+            {
+                var existingEntry = await JournalService.GetEntryByDateAsync(userId, Date);
+                if (existingEntry != null)
+                {
+                    result = await JournalService.UpdateEntryAsync(
+                        existingEntry.Id,
+                        userId,
+                        title: Model.Title,
+                        content: Model.Content,
+                        primaryMood: Model.PrimaryMood,
+                        secondaryMood1: Model.SecondaryMood1,
+                        secondaryMood2: Model.SecondaryMood2,
+                        tags: Model.Tags,
+                        category: Model.Category,
+                        isFavorite: Model.IsFavorite
+                    );
+                }
+                else
+                {
+                    // Entry doesn't exist for this date, create new one
+                    result = await JournalService.CreateEntryAsync(
+                        userId,
+                        title: Model.Title,
+                        content: Model.Content,
+                        primaryMood: Model.PrimaryMood,
+                        secondaryMood1: Model.SecondaryMood1,
+                        secondaryMood2: Model.SecondaryMood2,
+                        tags: Model.Tags,
+                        category: Model.Category,
+                        isFavorite: Model.IsFavorite
+                    );
+                }
+            }
+            else
+            {
+                // For new entry, use the specific date from the parameter
+                // First check if entry already exists for this date
+                var existingEntry = await JournalService.GetEntryByDateAsync(userId, Date);
+                if (existingEntry != null)
+                {
+                    ErrorMessage = $"You already have an entry for {Date:MMMM d, yyyy}. Please edit it instead.";
+                    IsLoading = false;
+                    return;
+                }
+
+                result = await JournalService.CreateEntryAsync(
+                    userId,
+                    title: Model.Title,
+                    content: Model.Content,
+                    primaryMood: Model.PrimaryMood,
+                    secondaryMood1: Model.SecondaryMood1,
+                    secondaryMood2: Model.SecondaryMood2,
+                    tags: Model.Tags,
+                    category: Model.Category,
+                    isFavorite: Model.IsFavorite
+                );
+            }
+
+            if (result.Success)
+            {
+                SuccessMessage = result.Message;
+                await Task.Delay(1200);
+                Navigation.NavigateTo("/dashboard");
+            }
+            else
+            {
+                ErrorMessage = result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "An error occurred. Please try again.";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task HandleDelete()
+    {
+        IsLoading = true;
+
+        try
+        {
+            var userId = 1; // Get from auth in production
+            var existingEntry = await JournalService.GetEntryByDateAsync(userId, Date);
+
+            if (existingEntry != null)
+            {
+                var result = await JournalService.DeleteEntryAsync(existingEntry.Id, userId);
+
+                if (result.Success)
+                {
+                    SuccessMessage = "Entry deleted successfully!";
+                    await Task.Delay(800);
+                    Navigation.NavigateTo("/dashboard");
+                }
+                else
+                {
+                    ErrorMessage = result.Message;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Error deleting entry. Please try again.";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            ShowDeleteModal = false;
+        }
+    }
+
+    private void AddTag()
+    {
+        if (!string.IsNullOrWhiteSpace(NewTag))
+        {
+            var tags = NewTag.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var tag in tags)
+            {
+                var trimmedTag = tag.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmedTag) && !SelectedTags.Contains(trimmedTag))
+                {
+                    SelectedTags.Add(trimmedTag);
+                }
+            }
+            NewTag = "";
+        }
+    }
+
+    private void AddTagDirect(string tag)
+    {
+        if (!SelectedTags.Contains(tag))
+        {
+            SelectedTags.Add(tag);
+        }
+    }
+
+    private void RemoveTag(string tag)
+    {
+        SelectedTags.Remove(tag);
+    }
+
+    private void HandleTagInput(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddTag();
+        }
+    }
+
+    private void TogglePreview()
+    {
+        ShowPreview = !ShowPreview;
+    }
+
+    private void NavigateToDashboard()
+    {
+        Navigation.NavigateTo("/dashboard");
+    }
+
+    private async Task InsertFormatting(string prefix, string suffix)
+    {
+        await JS.InvokeVoidAsync("insertText", textAreaRef, prefix, suffix);
+    }
+
+    private async Task InsertHeading(int level)
+    {
+        await InsertFormatting(new string('#', level) + " ", "");
+    }
+
+    private async Task InsertList()
+    {
+        await InsertFormatting("- ", "");
+    }
+
+    private async Task InsertLink()
+    {
+        await InsertFormatting("[", "](url)");
+    }
+
+    private async Task InsertCode()
+    {
+        await InsertFormatting("`", "`");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Register the insertText function and setup mirror scroll syncing
+            await JS.InvokeVoidAsync("eval", @"
+                window.insertText = function(textareaElement, prefix, suffix) {
+                    try {
+                        if (!textareaElement) {
+                            console.error('Textarea element not found');
+                            return;
+                        }
+
+                        const textarea = textareaElement;
+                        if (typeof textarea.value === 'undefined') {
+                            console.error('Textarea value is undefined');
+                            return;
+                        }
+
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+                        const text = textarea.value || '';
+                        const selectedText = text.substring(start, end);
+
+                        // If no text is selected, use 'text' as placeholder
+                        const insertionText = prefix + (selectedText || 'text') + suffix;
+
+                        // Update textarea value
+                        textarea.value = text.substring(0, start) + insertionText + text.substring(end);
+
+                        // Update cursor position
+                        const newCursorPos = start + insertionText.length;
+                        textarea.selectionStart = newCursorPos;
+                        textarea.selectionEnd = newCursorPos;
+                        textarea.focus();
+
+                        // Trigger input event to update Blazor binding
+                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+                        // Also trigger change event for good measure
+                        textarea.dispatchEvent(new Event('change', { bubbles: true }));
+                    } catch (err) {
+                        console.error('insertText error', err);
+                    }
+                };
+
+                window.setupEditorMirror = function(textarea, mirror) {
+                    try {
+                        if (!textarea || !mirror) return;
+                        // sync scroll: when textarea scrolls, update mirror
+                        textarea.addEventListener('scroll', function() {
+                            mirror.scrollTop = textarea.scrollTop;
+                            mirror.scrollLeft = textarea.scrollLeft;
+                        });
+                        // Also keep mirror width/height in sync on input (Blazor updates mirror markup)
+                        textarea.addEventListener('input', function() {
+                            // nothing here – Blazor will re-render mirror content
+                        });
+                    } catch (err) {
+                        console.error('setupEditorMirror error', err);
+                    }
+                };
+            ");
+
+            // call setup function passing the element references
+            await JS.InvokeVoidAsync("setupEditorMirror", textAreaRef, mirrorRef);
+        }
+    }
+}

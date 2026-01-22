@@ -1,0 +1,631 @@
+﻿@page "/my-journals"
+@page "/my-journals/{Page:int}"
+
+@using DailyJournal.Services
+@using DailyJournal.Data.Entities
+@using DailyJournal.Data.Constants
+@inject JournalService JournalService
+@inject NavigationManager Navigation
+
+<div class="journals-container">
+
+    <!-- HEADER -->
+    <div class="journals-header">
+        <div class="header-content">
+            <h1 class="page-title">Reflections</h1>
+            <p class="page-subtitle">
+                You have recorded <strong>@(Entries?.Count ?? 0)</strong> moments this month.
+            </p>
+        </div>
+
+        <!-- NEW ENTRY (a tag) -->
+        <a class="btn-new-entry"
+           href="/journal/@DateTime.Today.ToString("yyyy-MM-dd")">
+            <i class="bi bi-plus-circle-fill"></i> New Entry
+        </a>
+    </div>
+
+    <!-- UTILITY BAR -->
+    <div class="utility-bar">
+        <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input type="text" placeholder="Search memories..." />
+        </div>
+        <div class="filter-actions">
+            <span class="filter-btn">
+                <i class="bi bi-filter"></i> Filter
+            </span>
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="state-container">
+            <div class="spinner-custom"></div>
+            <p>Gathering your thoughts...</p>
+        </div>
+    }
+    else if (Entries == null || !Entries.Any())
+    {
+        <div class="state-container empty-card">
+            <div class="empty-icon">📂</div>
+            <h3>Your journal is a blank canvas</h3>
+            <p>Every great story starts with a single entry.</p>
+
+            <a class="btn-new-entry"
+               href="/journal/@DateTime.Today.ToString("yyyy-MM-dd")">
+                Write Today's Story
+            </a>
+        </div>
+    }
+    else
+    {
+        <!-- TABLE -->
+        <div class="table-card">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Entry Details</th>
+                        <th>Mood</th>
+                        <th>Stats</th>
+                        <th style="text-align:right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in Entries)
+                    {
+                        <tr>
+                            <td>
+                                <div class="date-box">
+                                    <span class="date-day">@entry.EntryDate.Day</span>
+                                    <span class="date-month">@entry.EntryDate.ToString("MMM")</span>
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="title-wrapper">
+                                    <span class="entry-title-text">@entry.Title</span>
+                                    @if (entry.IsFavorite)
+                                    {
+                                        <i class="bi bi-star-fill fav-star"></i>
+                                    }
+                                </div>
+                                <span class="entry-preview">
+                                    @entry.EntryDate.ToString("dddd") • Journal #@entry.Id
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="mood-pill @GetMoodClass(entry.PrimaryMood)">
+                                    <span class="mood-dot"></span> @entry.PrimaryMood
+                                </span>
+                            </td>
+
+                            <td>
+                                <i class="bi bi-justify-left"></i> @entry.WordCount words
+                            </td>
+
+                            <!-- ACTIONS -->
+                            <td class="action-column">
+                                <div class="button-group">
+
+                                    <!-- EDIT (a tag navigation) -->
+                                    <a class="icon-btn edit"
+                                       title="Edit"
+                                       href="/journal/@entry.EntryDate.ToString("yyyy-MM-dd")">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+
+                                    <!-- DELETE (a tag + onclick) -->
+                                    <a class="icon-btn delete"
+                                       title="Delete"
+                                       href="javascript:void(0)"
+                                       @onclick="() => ConfirmDelete(entry)">
+                                        <i class="bi bi-trash3"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PAGINATION -->
+        @if (TotalPages > 1)
+        {
+            <div class="pagination-wrapper">
+                <a class="pager-nav @(CurrentPage == 1 ? "disabled" : "")"
+                   href="/my-journals/@(CurrentPage - 1)">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+
+                @for (int i = 1; i <= TotalPages; i++)
+                {
+                    <a class="pager-number @(i == CurrentPage ? "is-active" : "")"
+                       href="/my-journals/@i">@i</a>
+                }
+
+                <a class="pager-nav @(CurrentPage == TotalPages ? "disabled" : "")"
+                   href="/my-journals/@(CurrentPage + 1)">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        }
+    }
+</div>
+
+<!-- DELETE MODAL -->
+@if (EntryToDelete != null)
+{
+    <div class="modal-backdrop">
+        <div class="modal-surface">
+            <div class="modal-icon-warn">!</div>
+            <h3>Delete Memory?</h3>
+            <p>
+                This entry from
+                <strong>@EntryToDelete.EntryDate.ToShortDateString()</strong>
+                will be removed forever.
+            </p>
+
+            <div class="modal-footer">
+                <a class="m-btn-cancel"
+                   href="javascript:void(0)"
+                   @onclick="() => EntryToDelete = null">
+                    Keep it
+                </a>
+
+                <a class="m-btn-confirm"
+                   href="javascript:void(0)"
+                   @onclick="HandleDelete">
+                    Delete Permanently
+                </a>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    :root {
+        --brand: #6366f1;
+        --brand-light: #eef2ff;
+        --surface: #ffffff;
+        --bg: #f8fafc;
+        --text-dark: #0f172a;
+        --text-light: #64748b;
+        --border: #e2e8f0;
+        --danger: #ef4444;
+    }
+
+    .journals-container {
+        max-width: 1100px;
+        margin: 3rem auto;
+        padding: 0 1rem;
+        font-family: 'Inter', -apple-system, sans-serif;
+    }
+
+    /* Header */
+    .journals-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        font-size: 2.25rem;
+        font-weight: 800;
+        color: var(--text-dark);
+        letter-spacing: -0.025em;
+        margin: 0;
+    }
+
+    .page-subtitle {
+        color: var(--text-light);
+        margin: 0.5rem 0 0 0;
+    }
+
+    .btn-new-entry {
+        background: var(--brand);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: transform 0.1s, background 0.2s;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    }
+
+        .btn-new-entry:hover {
+            background: #4f46e5;
+            transform: translateY(-1px);
+        }
+
+    /* Utility Bar */
+    .utility-bar {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .search-box {
+        flex: 1;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: var(--text-light);
+    }
+
+        .search-box input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 0.95rem;
+        }
+
+    .filter-btn {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    /* Table Card */
+    .table-card {
+        background: var(--surface);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .modern-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+        .modern-table th {
+            background: #fcfcfd;
+            padding: 1rem 1.5rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-light);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modern-table td {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+    /* Date Box */
+    .date-box {
+        background: var(--bg);
+        width: 50px;
+        height: 54px;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--border);
+    }
+
+    .date-day {
+        font-weight: 700;
+        color: var(--text-dark);
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+
+    .date-month {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: var(--brand);
+        font-weight: 700;
+    }
+
+    /* Content Column */
+    .title-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .entry-title-text {
+        font-weight: 600;
+        color: var(--text-dark);
+        font-size: 1rem;
+    }
+
+    .entry-preview {
+        font-size: 0.85rem;
+        color: var(--text-light);
+        display: block;
+        margin-top: 0.2rem;
+    }
+
+    .fav-star {
+        color: #f59e0b;
+    }
+
+    /* Mood Pilles */
+    .mood-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .mood-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+
+    .mood-positive {
+        background: #ecfdf5;
+        color: #065f46;
+    }
+
+        .mood-positive .mood-dot {
+            background: #10b981;
+        }
+
+    .mood-neutral {
+        background: #f8fafc;
+        color: #475569;
+    }
+
+        .mood-neutral .mood-dot {
+            background: #94a3b8;
+        }
+
+    .mood-negative {
+        background: #fef2f2;
+        color: #991b1b;
+    }
+
+        .mood-negative .mood-dot {
+            background: #ef4444;
+        }
+
+    /* Actions */
+    .button-group {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    .icon-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text-light);
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .edit:hover {
+        border-color: var(--brand);
+        color: var(--brand);
+        background: var(--brand-light);
+    }
+
+    .delete:hover {
+        border-color: var(--danger);
+        color: var(--danger);
+        background: #fef2f2;
+    }
+
+    /* Pagination */
+    .pagination-wrapper {
+        margin-top: 2rem;
+        display: flex;
+        justify-content: center;
+        gap: 0.4rem;
+        align-items: center;
+    }
+
+    .pager-number {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+        .pager-number.is-active {
+            background: var(--brand);
+            color: white;
+            border-color: var(--brand);
+        }
+
+    .pager-nav {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        cursor: pointer;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+    }
+
+    .modal-surface {
+        background: white;
+        padding: 2rem;
+        border-radius: 20px;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+    }
+
+    .modal-icon-warn {
+        width: 60px;
+        height: 60px;
+        background: #fee2e2;
+        color: #ef4444;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0 auto 1rem;
+    }
+
+    .modal-footer {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 2rem;
+    }
+
+    .m-btn-cancel {
+        flex: 1;
+        padding: 0.75rem;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        cursor: pointer;
+    }
+
+    .m-btn-confirm {
+        flex: 1;
+        padding: 0.75rem;
+        border-radius: 10px;
+        border: none;
+        background: var(--danger);
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    /* Loading/Empty State */
+    .state-container {
+        text-align: center;
+        padding: 5rem 2rem;
+        color: var(--text-light);
+    }
+
+    .spinner-custom {
+        border: 3px solid var(--border);
+        border-top: 3px solid var(--brand);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    @@keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+a { text-decoration: none; }
+
+.btn-new-entry,
+.icon-btn,
+.pager-number,
+.pager-nav,
+.filter-btn,
+.m-btn-cancel,
+.m-btn-confirm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* disable pagination links */
+.pager-nav.disabled {
+    pointer-events: none;
+    opacity: 0.4;
+}
+</style>
+
+@code {
+    [Parameter] public int Page { get; set; } = 1;
+
+    private List<JournalEntry>? Entries;
+    private int CurrentPage = 1;
+    private int TotalPages = 1;
+    private bool IsLoading = true;
+    private JournalEntry? EntryToDelete;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        CurrentPage = Page <= 0 ? 1 : Page;
+        await LoadEntries();
+    }
+
+    private async Task LoadEntries()
+    {
+        IsLoading = true;
+        try
+        {
+            var userId = 1;
+            var result = await JournalService.GetPaginatedEntriesAsync(userId, CurrentPage, 10);
+            if (result.Success)
+            {
+                Entries = result.Entries;
+                TotalPages = result.TotalPages;
+            }
+        }
+        finally { IsLoading = false; }
+    }
+
+    private void ConfirmDelete(JournalEntry entry) => EntryToDelete = entry;
+
+    private async Task HandleDelete()
+    {
+        if (EntryToDelete == null) return;
+        await JournalService.DeleteEntryAsync(EntryToDelete.Id, 1);
+        EntryToDelete = null;
+        await LoadEntries();
+    }
+
+    private string GetMoodClass(string mood)
+    {
+        if (string.IsNullOrEmpty(mood)) return "mood-neutral";
+        if (Moods.Positive.GetAll().Contains(mood)) return "mood-positive";
+        if (Moods.Negative.GetAll().Contains(mood)) return "mood-negative";
+        return "mood-neutral";
+    }
+}

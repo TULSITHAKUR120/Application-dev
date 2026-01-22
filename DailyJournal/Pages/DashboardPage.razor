@@ -1,0 +1,630 @@
+﻿@page "/dashboard"
+@using DailyJournal.Services
+@using DailyJournal.Data.Entities
+@inject DashboardService DashboardService
+@inject JournalService JournalService
+@inject NavigationManager Navigation
+
+<div class="dashboard-page">
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">Dashboard</h1>
+        <p class="dashboard-subtitle">Welcome back! Here's your journaling overview</p>
+        <div class="dashboard-actions">
+            <button class="btn btn-primary" @onclick="NavigateToToday">
+                <i class="bi bi-plus-circle me-1"></i>Write Today's Entry
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="RefreshDashboard">
+                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="dashboard-filters mb-4">
+        <div class="row">
+            <div class="col-md-3">
+                <label class="form-label">Date Range</label>
+                <select @bind="SelectedDateRange" class="form-select">
+                    <option value="7">Last 7 Days</option>
+                    <option value="30">Last 30 Days</option>
+                    <option value="90">Last 3 Months</option>
+                    <option value="365">Last Year</option>
+                    <option value="0">All Time</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" @bind="StartDate" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">End Date</label>
+                <input type="date" @bind="EndDate" class="form-control" />
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-outline-primary w-100" @onclick="ApplyFilters">
+                    <i class="bi bi-funnel me-1"></i>Apply Filters
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading your dashboard...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Streak Stats -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="stat-card streak-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-fire text-danger"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-value">@Statistics.StreakInfo.CurrentStreak</h3>
+                        <p class="stat-label">Current Streak</p>
+                        <small class="stat-subtext">🔥 Keep it up!</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card record-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-trophy text-warning"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-value">@Statistics.StreakInfo.LongestStreak</h3>
+                        <p class="stat-label">Longest Streak</p>
+                        <small class="stat-subtext">🏆 Your personal best</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card total-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-journal-text text-primary"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-value">@Statistics.StreakInfo.TotalEntries</h3>
+                        <p class="stat-label">Total Entries</p>
+                        <small class="stat-subtext">📚 All your stories</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mood & Writing Stats -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Mood Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Statistics.MoodDistribution.TotalEntries > 0)
+                        {
+                            <div class="mood-distribution">
+                                <div class="mood-category positive">
+                                    <div class="mood-bar" style="width: @($"{Statistics.MoodDistribution.PositivePercentage}%")"></div>
+                                    <div class="mood-info">
+                                        <span class="mood-label">Positive</span>
+                                        <span class="mood-value">@Statistics.MoodDistribution.PositiveCount (@Statistics.MoodDistribution.PositivePercentage.ToString("0.0")%)</span>
+                                    </div>
+                                </div>
+                                <div class="mood-category neutral">
+                                    <div class="mood-bar" style="width: @($"{Statistics.MoodDistribution.NeutralPercentage}%")"></div>
+                                    <div class="mood-info">
+                                        <span class="mood-label">Neutral</span>
+                                        <span class="mood-value">@Statistics.MoodDistribution.NeutralCount (@Statistics.MoodDistribution.NeutralPercentage.ToString("0.0")%)</span>
+                                    </div>
+                                </div>
+                                <div class="mood-category negative">
+                                    <div class="mood-bar" style="width: @($"{Statistics.MoodDistribution.NegativePercentage}%")"></div>
+                                    <div class="mood-info">
+                                        <span class="mood-label">Negative</span>
+                                        <span class="mood-value">@Statistics.MoodDistribution.NegativeCount (@Statistics.MoodDistribution.NegativePercentage.ToString("0.0")%)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center py-3">No mood data available yet.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Writing Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 text-center">
+                                <div class="writing-stat">
+                                    <i class="bi bi-fonts display-4 text-primary mb-2"></i>
+                                    <h2>@Statistics.TotalWordCount</h2>
+                                    <p class="text-muted mb-0">Total Words</p>
+                                </div>
+                            </div>
+                            <div class="col-6 text-center">
+                                <div class="writing-stat">
+                                    <i class="bi bi-textarea-t display-4 text-success mb-2"></i>
+                                    <h2>@Statistics.AverageWordCount</h2>
+                                    <p class="text-muted mb-0">Avg. per Entry</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <p class="mb-1">
+                                <i class="bi bi-emoji-smile text-success me-2"></i>
+                                Most Frequent Mood: <strong>@Statistics.MostFrequentMood.Mood</strong>
+                                (@Statistics.MostFrequentMood.Count times)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Most Used Tags -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Most Used Tags</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Statistics.MostUsedTags.Any())
+                        {
+                            <div class="tags-cloud">
+                                @foreach (var tag in Statistics.MostUsedTags)
+                                {
+                                    var fontSize = 0.8 + (tag.Count / (double)Statistics.MostUsedTags[0].Count) * 1.2;
+                                    <span class="tag-cloud-item" style="font-size: @($"{fontSize}rem")"
+                                          @onclick="() => ViewTagEntries(tag.Tag)">
+                                        @tag.Tag <span class="badge bg-secondary">@tag.Count</span>
+                                    </span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center py-3">No tags yet. Add tags to your entries!</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Entries -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Recent Entries</h5>
+                        <a href="/entries" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    <div class="card-body">
+                        @if (RecentEntries.Any())
+                        {
+                            <div class="recent-entries">
+                                @foreach (var entry in RecentEntries)
+                                {
+                                    <div class="recent-entry" @onclick="() => ViewEntry(entry.Id)">
+                                        <div class="entry-date">
+                                            <span class="date-day">@entry.EntryDate.Day</span>
+                                            <span class="date-month">@entry.EntryDate.ToString("MMM")</span>
+                                        </div>
+                                        <div class="entry-content">
+                                            <h6 class="entry-title">@entry.Title</h6>
+                                            <p class="entry-preview">@GetContentPreview(entry.Content)</p>
+                                            <div class="entry-meta">
+                                                <span class="badge bg-primary me-2">@entry.PrimaryMood</span>
+                                                @if (!string.IsNullOrEmpty(entry.SecondaryMood1))
+                                                {
+                                                    <span class="badge bg-secondary me-2">@entry.SecondaryMood1</span>
+                                                }
+                                                @if (entry.IsFavorite)
+                                                {
+                                                    <span class="badge bg-warning"><i class="bi bi-star-fill"></i></span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="bi bi-journal-x display-4 text-muted mb-3"></i>
+                                <p class="text-muted">No recent entries found.</p>
+                                <button class="btn btn-primary" @onclick="NavigateToToday">
+                                    Start Your First Entry
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool IsLoading = true;
+    private DashboardStatistics Statistics = new();
+    private List<JournalEntry> RecentEntries = new();
+    private DateTime StartDate = DateTime.Today.AddDays(-30);
+    private DateTime EndDate = DateTime.Today;
+    private string SelectedDateRange = "30";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        IsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var userId = 1; // Get from auth state
+
+            // Load statistics
+            Statistics = await DashboardService.GetDashboardStatisticsAsync(userId);
+
+            // Load recent entries
+            // var entriesResult = await JournalService.GetEntriesAsync(userId, 1, 5);
+            // RecentEntries = entriesResult.Entries;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dashboard: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ApplyFilters()
+    {
+        // Update date range based on selection
+        if (SelectedDateRange != "0")
+        {
+            var days = int.Parse(SelectedDateRange);
+            StartDate = DateTime.Today.AddDays(-days);
+            EndDate = DateTime.Today;
+        }
+
+        await LoadDashboardData();
+    }
+
+    private async Task RefreshDashboard()
+    {
+        await LoadDashboardData();
+    }
+
+    private void NavigateToToday()
+    {
+        Navigation.NavigateTo($"/journal/{DateTime.Today:yyyy-MM-dd}");
+    }
+
+    private void ViewEntry(int entryId)
+    {
+        Navigation.NavigateTo($"/entry/{entryId}");
+    }
+
+    private void ViewTagEntries(string tag)
+    {
+        Navigation.NavigateTo($"/entries?tag={tag}");
+    }
+
+    private string GetContentPreview(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+            return "No content";
+
+        var preview = System.Text.RegularExpressions.Regex.Replace(content, @"[#*_`\[\]()]", "");
+        return preview.Length > 100 ? preview.Substring(0, 100) + "..." : preview;
+    }
+}
+
+<style>
+    .dashboard-page {
+        padding: 20px;
+        background-color: #f8f9fa;
+        min-height: 100vh;
+    }
+
+    .dashboard-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #007bff;
+    }
+
+    .dashboard-title {
+        color: #343a40;
+        font-size: 2.5rem;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .dashboard-subtitle {
+        color: #6c757d;
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+    }
+
+    .dashboard-actions {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .dashboard-filters {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+        display: flex;
+        align-items: center;
+        height: 100%;
+        transition: transform 0.2s ease;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+    .streak-card {
+        border-top: 4px solid #dc3545;
+    }
+
+    .record-card {
+        border-top: 4px solid #ffc107;
+    }
+
+    .total-card {
+        border-top: 4px solid #007bff;
+    }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-right: 20px;
+        width: 60px;
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin: 0;
+        color: #343a40;
+    }
+
+    .stat-label {
+        color: #6c757d;
+        font-size: 1rem;
+        margin: 5px 0;
+    }
+
+    .stat-subtext {
+        color: #adb5bd;
+        font-size: 0.85rem;
+    }
+
+    .mood-distribution {
+        margin-top: 10px;
+    }
+
+    .mood-category {
+        margin-bottom: 15px;
+    }
+
+    .mood-bar {
+        height: 25px;
+        border-radius: 5px;
+        margin-bottom: 5px;
+        transition: width 0.5s ease;
+    }
+
+    .positive .mood-bar {
+        background-color: #28a745;
+    }
+
+    .neutral .mood-bar {
+        background-color: #ffc107;
+    }
+
+    .negative .mood-bar {
+        background-color: #dc3545;
+    }
+
+    .mood-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .mood-label {
+        font-weight: 600;
+    }
+
+    .mood-value {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .writing-stat {
+        padding: 15px 0;
+    }
+
+        .writing-stat h2 {
+            font-weight: 700;
+            color: #343a40;
+            margin: 10px 0;
+        }
+
+    .tags-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        padding: 10px;
+    }
+
+    .tag-cloud-item {
+        cursor: pointer;
+        padding: 8px 15px;
+        background: #e9ecef;
+        border-radius: 20px;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+        .tag-cloud-item:hover {
+            background: #007bff;
+            color: white;
+            transform: scale(1.05);
+        }
+
+    .recent-entries {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .recent-entry {
+        display: flex;
+        padding: 15px;
+        border-bottom: 1px solid #e9ecef;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+        .recent-entry:hover {
+            background-color: #f8f9fa;
+        }
+
+    .entry-date {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 70px;
+        margin-right: 20px;
+    }
+
+    .date-day {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #007bff;
+        line-height: 1;
+    }
+
+    .date-month {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+    }
+
+    .entry-content {
+        flex: 1;
+    }
+
+    .entry-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #343a40;
+    }
+
+    .entry-preview {
+        color: #6c757d;
+        margin-bottom: 10px;
+        font-size: 0.95rem;
+        line-height: 1.4;
+    }
+
+    .entry-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+    }
+
+    .card-header {
+        background-color: white;
+        border-bottom: 1px solid #e9ecef;
+        padding: 20px;
+    }
+
+    .card-title {
+        font-weight: 600;
+        color: #343a40;
+    }
+
+    .card-body {
+        padding: 25px;
+    }
+
+   
+
+   
+
+    .dashboard-actions {
+        flex-direction: column;
+    }
+
+        .dashboard-actions .btn {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+    .stat-card {
+        margin-bottom: 20px;
+    }
+
+    .recent-entry {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .entry-date {
+        margin-right: 0;
+        margin-bottom: 15px;
+        flex-direction: row;
+        gap: 10px;
+    }
+
+    .date-day {
+        font-size: 1.5rem;
+    }
+
+    }
+</style>

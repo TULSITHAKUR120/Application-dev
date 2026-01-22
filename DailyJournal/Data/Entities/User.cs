@@ -13,8 +13,8 @@ namespace DailyJournal.Data.Entities
         public string Username { get; set; } = string.Empty;
 
         [Required]
-        [EmailAddress]
         [MaxLength(100)]
+        [EmailAddress]
         public string Email { get; set; } = string.Empty;
 
         [Required]
@@ -24,21 +24,22 @@ namespace DailyJournal.Data.Entities
         [MaxLength(256)]
         public string? PIN { get; set; }
 
-        [Required]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }
+
+        public bool IsActive { get; set; } = true;
 
         public DateTime? LastLoginAt { get; set; }
 
-        public bool IsActive { get; set; } = true;
-        public bool IsDarkTheme { get; set; } = false;
+        [MaxLength(7)]
+        public string? PrimaryColor { get; set; }
 
         [MaxLength(7)]
-        public string PrimaryColor { get; set; } = "#2196F3";
-
-        [MaxLength(7)]
-        public string SecondaryColor { get; set; } = "#FF9800";
+        public string? SecondaryColor { get; set; }
 
         // Navigation property
-        public virtual UserSettings UserSettings { get; set; } = null!;
+        public UserSettings? UserSettings { get; set; }
+
+        public ICollection<JournalEntry> JournalEntries { get; set; } = new List<JournalEntry>();
+
     }
 }

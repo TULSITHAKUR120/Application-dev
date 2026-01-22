@@ -1,0 +1,13 @@
+@* @using DailyJournal.Services
+@using DailyJournal.Data.Constants
+@using DailyJournal.Data.Models
+@using DailyJournal.Data.Entities
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using Markdig
+@using Microsoft.JSInterop
+
+<InputTextArea @ref="textAreaRef"
+               @bind-Value="Model.Content"
+               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition min-h-[300px] font-mono"
+               placeholder="Write your thoughts here... Markdown is supported." /> *@

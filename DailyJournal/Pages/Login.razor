@@ -5,6 +5,7 @@
 @inject UserService UserService
 @inject NavigationManager Navigation
 
+
 <div class="register-page">
     <div class="register-container shadow-sm">
         <div class="register-header">
@@ -89,7 +90,12 @@
 
             if (result.Success)
             {
-                Navigation.NavigateTo("/");
+                // Save user ID in Preferences (session-like storage)
+                Preferences.Set("UserId", result.UserId);
+                Preferences.Set("UserName", result.Username);
+
+                // Navigate to dashboard
+                Navigation.NavigateTo("/dashboard");
             }
             else
             {
@@ -105,6 +111,8 @@
             IsLoading = false;
         }
     }
+
+
 }
 
 <style>

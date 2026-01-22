@@ -1,424 +1,495 @@
-﻿//using DailyJournal.Data.Database;
-//using DailyJournal.Data.Entities;
-//using DailyJournal.Data.Models;
-//using Microsoft.EntityFrameworkCore;
-//using Microsoft.Maui;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using DailyJournal.Data.Database;
+using DailyJournal.Data.Entities;
+using DailyJournal.Data.Constants;
+using DailyJournal.Data.Models; // Add this
+using Microsoft.EntityFrameworkCore;
 
-//namespace DailyJournal.Services
-//{
-//    public class JournalService
-//    {
-//        private readonly AppDbContext _context;
+namespace DailyJournal.Services
+{
+    public class JournalService
+    {
+        private readonly AppDbContext _context;
 
-//        public JournalService()
-//        {
-//            _context = new AppDbContext();
-//        }
+        public JournalService(AppDbContext context)
+        {
+            _context = context;
+        }
 
-//        public async Task<List<JournalEntryModel>> GetEntriesAsync(FilterModel filter)
-//        {
-//            try
-//            {
-//                var query = _context.JournalEntries
-//                    .Include(e => e.PrimaryMood)
-//                    .Include(e => e.SecondaryMood1)
-//                    .Include(e => e.SecondaryMood2)
-//                    .Include(e => e.Category)
-//                    .Include(e => e.JournalTags)
-//                        .ThenInclude(jt => jt.Tag)
-//                    .AsQueryable();
+        // Create a new journal entry (one per day constraint)
+        public async Task<JournalResult> CreateEntryAsync(int userId, string title, string content,
+            string primaryMood, string? secondaryMood1 = null, string? secondaryMood2 = null,
+            string? tags = null, string? category = null, bool isFavorite = false)
+        {
+            try
+            {
+                // Validate primary mood
+                if (!Moods.GetAllMoods().Contains(primaryMood))
+                {
+                    return JournalResult.FailureResult("Invalid primary mood selected.");
+                }
 
-//                // Apply filters
-//                if (filter.StartDate.HasValue)
-//                    query = query.Where(e => e.EntryDate >= filter.StartDate.Value);
+                // Validate secondary moods if provided
+                if (!string.IsNullOrEmpty(secondaryMood1) &&
+                    !Moods.GetAllMoods().Contains(secondaryMood1))
+                {
+                    return JournalResult.FailureResult("Invalid secondary mood 1 selected.");
+                }
 
-//                if (filter.EndDate.HasValue)
-//                    query = query.Where(e => e.EntryDate <= filter.EndDate.Value);
+                if (!string.IsNullOrEmpty(secondaryMood2) &&
+                    !Moods.GetAllMoods().Contains(secondaryMood2))
+                {
+                    return JournalResult.FailureResult("Invalid secondary mood 2 selected.");
+                }
 
-//                if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
-//                {
-//                    query = query.Where(e =>
-//                        e.Title.Contains(filter.SearchTerm) ||
-//                        e.Content.Contains(filter.SearchTerm));
-//                }
+                // Check if entry already exists for today
+                var today = DateTime.Today;
+                var existingEntry = await _context.JournalEntries
+                    .FirstOrDefaultAsync(e => e.UserId == userId && e.EntryDate.Date == today);
 
-//                if (filter.MoodIds.Any())
-//                {
-//                    query = query.Where(e =>
-//                        filter.MoodIds.Contains(e.PrimaryMoodId) ||
-//                        (e.SecondaryMood1Id.HasValue && filter.MoodIds.Contains(e.SecondaryMood1Id.Value)) ||
-//                        (e.SecondaryMood2Id.HasValue && filter.MoodIds.Contains(e.SecondaryMood2Id.Value)));
-//                }
+                if (existingEntry != null)
+                {
+                    return JournalResult.FailureResult("You already have an entry for today. Use update instead.");
+                }
 
-//                if (filter.TagIds.Any())
-//                {
-//                    query = query.Where(e =>
-//                        e.JournalTags.Any(jt => filter.TagIds.Contains(jt.TagId)));
-//                }
+                // Calculate word count
+                int wordCount = CalculateWordCount(content);
 
-//                if (filter.CategoryId.HasValue)
-//                    query = query.Where(e => e.CategoryId == filter.CategoryId.Value);
+                // Create new entry
+                var entry = new JournalEntry
+                {
+                    UserId = userId,
+                    Title = title,
+                    Content = content,
+                    EntryDate = today,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now,
+                    PrimaryMood = primaryMood,
+                    SecondaryMood1 = secondaryMood1,
+                    SecondaryMood2 = secondaryMood2,
+                    Tags = tags,
+                    Category = category,
+                    IsFavorite = isFavorite,
+                    IsPrivate = false,
+                    WordCount = wordCount,
+                  //  MoodCategory = entry.GetMoodCategory() // Set mood category
+                };
 
-//                // Apply sorting
-//                query = filter.SortBy switch
-//                {
-//                    "Title" => filter.SortDescending
-//                        ? query.OrderByDescending(e => e.Title)
-//                        : query.OrderBy(e => e.Title),
-//                    "CreatedAt" => filter.SortDescending
-//                        ? query.OrderByDescending(e => e.CreatedAt)
-//                        : query.OrderBy(e => e.CreatedAt),
-//                    "UpdatedAt" => filter.SortDescending
-//                        ? query.OrderByDescending(e => e.UpdatedAt)
-//                        : query.OrderBy(e => e.UpdatedAt),
-//                    _ => filter.SortDescending
-//                        ? query.OrderByDescending(e => e.EntryDate)
-//                        : query.OrderBy(e => e.EntryDate)
-//                };
+                // Save to database
+                _context.JournalEntries.Add(entry);
+                await _context.SaveChangesAsync();
 
-//                // Pagination
-//                var totalCount = await query.CountAsync();
-//                var items = await query
-//                    .Skip((filter.PageNumber - 1) * filter.PageSize)
-//                    .Take(filter.PageSize)
-//                    .ToListAsync();
+                // Convert to model
+                var entryModel = JournalEntryModel.FromEntity(entry);
+                return JournalResult.SuccessResult("Journal entry created successfully!", entryModel);
+            }
+            catch (Exception ex)
+            {
+                return JournalResult.FailureResult($"Error creating entry: {ex.Message}");
+            }
+        }
 
-//                // Convert to models
-//                var models = items.Select(e => new JournalEntryModel
-//                {
-//                    Id = e.Id,
-//                    EntryDate = e.EntryDate,
-//                    Title = e.Title,
-//                    Content = e.Content,
-//                    ContentPreview = e.ContentPreview,
-//                    IsRichText = e.IsRichText,
-//                    WordCount = e.WordCount,
-//                    CharacterCount = e.CharacterCount,
-//                    CreatedAt = e.CreatedAt,
-//                    UpdatedAt = e.UpdatedAt,
-//                    PrimaryMood = e.PrimaryMood != null ? new MoodModel
-//                    {
-//                        Id = e.PrimaryMood.Id,
-//                        Name = e.PrimaryMood.Name,
-//                        MoodType = e.PrimaryMood.MoodType,
-//                        Emoji = e.PrimaryMood.Emoji,
-//                        Color = e.PrimaryMood.Color,
-//                        IsPredefined = e.PrimaryMood.IsPredefined
-//                    } : null,
-//                    SecondaryMood1 = e.SecondaryMood1 != null ? new MoodModel
-//                    {
-//                        Id = e.SecondaryMood1.Id,
-//                        Name = e.SecondaryMood1.Name,
-//                        MoodType = e.SecondaryMood1.MoodType,
-//                        Emoji = e.SecondaryMood1.Emoji,
-//                        Color = e.SecondaryMood1.Color,
-//                        IsPredefined = e.SecondaryMood1.IsPredefined
-//                    } : null,
-//                    SecondaryMood2 = e.SecondaryMood2 != null ? new MoodModel
-//                    {
-//                        Id = e.SecondaryMood2.Id,
-//                        Name = e.SecondaryMood2.Name,
-//                        MoodType = e.SecondaryMood2.MoodType,
-//                        Emoji = e.SecondaryMood2.Emoji,
-//                        Color = e.SecondaryMood2.Color,
-//                        IsPredefined = e.SecondaryMood2.IsPredefined
-//                    } : null,
-//                    Category = e.Category != null ? new CategoryModel
-//                    {
-//                        Id = e.Category.Id,
-//                        Name = e.Category.Name,
-//                        Description = e.Category.Description,
-//                        Color = e.Category.Color,
-//                        IsPredefined = e.Category.IsPredefined
-//                    } : null,
-//                    Tags = e.JournalTags.Select(jt => new TagModel
-//                    {
-//                        Id = jt.Tag.Id,
-//                        Name = jt.Tag.Name,
-//                        Color = jt.Tag.Color,
-//                        IsPredefined = jt.Tag.IsPredefined,
-//                        UsageCount = jt.Tag.UsageCount,
-//                        LastUsed = jt.Tag.LastUsed
-//                    }).ToList()
-//                }).ToList();
+        // Update existing entry
+        public async Task<JournalResult> UpdateEntryAsync(int entryId, int userId,
+            string? title = null, string? content = null, string? primaryMood = null,
+            string? secondaryMood1 = null, string? secondaryMood2 = null,
+            string? tags = null, string? category = null, bool? isFavorite = null)
+        {
+            try
+            {
+                var entry = await _context.JournalEntries
+                    .FirstOrDefaultAsync(e => e.Id == entryId && e.UserId == userId);
 
-//                return models;
-//            }
-//            catch (Exception ex)
-//            {
-//                Console.WriteLine($"Error getting entries: {ex.Message}");
-//                return new List<JournalEntryModel>();
-//            }
-//        }
+                if (entry == null)
+                {
+                    return JournalResult.FailureResult("Entry not found or you don't have permission to edit it.");
+                }
 
-//        public async Task<JournalEntryModel> GetEntryByDateAsync(DateTime date)
-//        {
-//            try
-//            {
-//                var entry = await _context.JournalEntries
-//                    .Include(e => e.PrimaryMood)
-//                    .Include(e => e.SecondaryMood1)
-//                    .Include(e => e.SecondaryMood2)
-//                    .Include(e => e.Category)
-//                    .Include(e => e.JournalTags)
-//                        .ThenInclude(jt => jt.Tag)
-//                    .FirstOrDefaultAsync(e => e.EntryDate.Date == date.Date);
+                // Validate moods if provided
+                if (!string.IsNullOrEmpty(primaryMood))
+                {
+                    if (!Moods.GetAllMoods().Contains(primaryMood))
+                    {
+                        return JournalResult.FailureResult("Invalid primary mood selected.");
+                    }
+                    entry.PrimaryMood = primaryMood;
+                    entry.MoodCategory = entry.GetMoodCategory(); // Update mood category
+                }
 
-//                if (entry == null)
-//                {
-//                    return new JournalEntryModel
-//                    {
-//                        EntryDate = date,
-//                        Title = "Untitled Entry",
-//                        Content = string.Empty,
-//                        IsRichText = true
-//                    };
-//                }
+                if (!string.IsNullOrEmpty(secondaryMood1))
+                {
+                    if (!Moods.GetAllMoods().Contains(secondaryMood1) && secondaryMood1 != "")
+                    {
+                        return JournalResult.FailureResult("Invalid secondary mood 1 selected.");
+                    }
+                    entry.SecondaryMood1 = string.IsNullOrWhiteSpace(secondaryMood1) ? null : secondaryMood1;
+                }
 
-//                return new JournalEntryModel
-//                {
-//                    Id = entry.Id,
-//                    EntryDate = entry.EntryDate,
-//                    Title = entry.Title,
-//                    Content = entry.Content,
-//                    ContentPreview = entry.ContentPreview,
-//                    IsRichText = entry.IsRichText,
-//                    WordCount = entry.WordCount,
-//                    CharacterCount = entry.CharacterCount,
-//                    CreatedAt = entry.CreatedAt,
-//                    UpdatedAt = entry.UpdatedAt,
-//                    PrimaryMood = entry.PrimaryMood != null ? new MoodModel
-//                    {
-//                        Id = entry.PrimaryMood.Id,
-//                        Name = entry.PrimaryMood.Name,
-//                        MoodType = entry.PrimaryMood.MoodType,
-//                        Emoji = entry.PrimaryMood.Emoji,
-//                        Color = entry.PrimaryMood.Color,
-//                        IsPredefined = entry.PrimaryMood.IsPredefined
-//                    } : null,
-//                    SecondaryMood1 = entry.SecondaryMood1 != null ? new MoodModel
-//                    {
-//                        Id = entry.SecondaryMood1.Id,
-//                        Name = entry.SecondaryMood1.Name,
-//                        MoodType = entry.SecondaryMood1.MoodType,
-//                        Emoji = entry.SecondaryMood1.Emoji,
-//                        Color = entry.SecondaryMood1.Color,
-//                        IsPredefined = entry.SecondaryMood1.IsPredefined
-//                    } : null,
-//                    SecondaryMood2 = entry.SecondaryMood2 != null ? new MoodModel
-//                    {
-//                        Id = entry.SecondaryMood2.Id,
-//                        Name = entry.SecondaryMood2.Name,
-//                        MoodType = entry.SecondaryMood2.MoodType,
-//                        Emoji = entry.SecondaryMood2.Emoji,
-//                        Color = entry.SecondaryMood2.Color,
-//                        IsPredefined = entry.SecondaryMood2.IsPredefined
-//                    } : null,
-//                    Category = entry.Category != null ? new CategoryModel
-//                    {
-//                        Id = entry.Category.Id,
-//                        Name = entry.Category.Name,
-//                        Description = entry.Category.Description,
-//                        Color = entry.Category.Color,
-//                        IsPredefined = entry.Category.IsPredefined
-//                    } : null,
-//                    Tags = entry.JournalTags.Select(jt => new TagModel
-//                    {
-//                        Id = jt.Tag.Id,
-//                        Name = jt.Tag.Name,
-//                        Color = jt.Tag.Color,
-//                        IsPredefined = jt.Tag.IsPredefined,
-//                        UsageCount = jt.Tag.UsageCount,
-//                        LastUsed = jt.Tag.LastUsed
-//                    }).ToList()
-//                };
-//            }
-//            catch (Exception ex)
-//            {
-//                Console.WriteLine($"Error getting entry by date: {ex.Message}");
-//                return new JournalEntryModel
-//                {
-//                    EntryDate = date,
-//                    Title = "Untitled Entry",
-//                    Content = string.Empty,
-//                    IsRichText = true
-//                };
-//            }
-//        }
+                if (!string.IsNullOrEmpty(secondaryMood2))
+                {
+                    if (!Moods.GetAllMoods().Contains(secondaryMood2) && secondaryMood2 != "")
+                    {
+                        return JournalResult.FailureResult("Invalid secondary mood 2 selected.");
+                    }
+                    entry.SecondaryMood2 = string.IsNullOrWhiteSpace(secondaryMood2) ? null : secondaryMood2;
+                }
 
-//        public async Task<bool> SaveEntryAsync(JournalEntryModel model)
-//        {
-//            try
-//            {
-//                // Check if entry already exists for this date
-//                var existingEntry = await _context.JournalEntries
-//                    .Include(e => e.JournalTags)
-//                    .FirstOrDefaultAsync(e => e.EntryDate.Date == model.EntryDate.Date);
+                // Update other fields if provided
+                if (!string.IsNullOrEmpty(title))
+                    entry.Title = title;
 
-//                JournalEntry entry;
-//                bool isNew = false;
+                if (!string.IsNullOrEmpty(content))
+                {
+                    entry.Content = content;
+                    entry.CalculateWordCount();
+                }
 
-//                if (existingEntry == null)
-//                {
-//                    // Create new entry
-//                    entry = new JournalEntry
-//                    {
-//                        EntryDate = model.EntryDate.Date,
-//                        CreatedAt = DateTime.UtcNow,
-//                        JournalTags = new List<JournalTag>()
-//                    };
-//                    _context.JournalEntries.Add(entry);
-//                    isNew = true;
-//                }
-//                else
-//                {
-//                    entry = existingEntry;
-//                }
+                if (tags != null)
+                    entry.Tags = tags;
 
-//                // Update entry properties
-//                entry.Title = model.Title ?? "Untitled Entry";
-//                entry.Content = model.Content ?? string.Empty;
-//                entry.IsRichText = model.IsRichText;
-//                entry.UpdatedAt = DateTime.UtcNow;
+                if (category != null)
+                    entry.Category = category;
 
-//                // Calculate word count
-//                entry.WordCount = CalculateWordCount(entry.Content);
-//                entry.CharacterCount = entry.Content.Length;
-//                entry.ContentPreview = entry.Content.Length > 100
-//                    ? entry.Content.Substring(0, 100) + "..."
-//                    : entry.Content;
+                if (isFavorite.HasValue)
+                    entry.IsFavorite = isFavorite.Value;
 
-//                // Update moods
-//                if (model.PrimaryMood != null)
-//                    entry.PrimaryMoodId = model.PrimaryMood.Id;
+                entry.UpdatedAt = DateTime.Now;
 
-//                if (model.SecondaryMood1 != null)
-//                    entry.SecondaryMood1Id = model.SecondaryMood1.Id;
-//                else
-//                    entry.SecondaryMood1Id = null;
+                await _context.SaveChangesAsync();
 
-//                if (model.SecondaryMood2 != null)
-//                    entry.SecondaryMood2Id = model.SecondaryMood2.Id;
-//                else
-//                    entry.SecondaryMood2Id = null;
+                // Convert to model
+                var entryModel = JournalEntryModel.FromEntity(entry);
+                return JournalResult.SuccessResult("Entry updated successfully!", entryModel);
+            }
+            catch (Exception ex)
+            {
+                return JournalResult.FailureResult($"Error updating entry: {ex.Message}");
+            }
+        }
 
-//                // Update category
-//                if (model.Category != null)
-//                    entry.CategoryId = model.Category.Id;
-//                else
-//                    entry.CategoryId = null;
+        // Delete entry
+        public async Task<JournalResult> DeleteEntryAsync(int entryId, int userId)
+        {
+            try
+            {
+                var entry = await _context.JournalEntries
+                    .FirstOrDefaultAsync(e => e.Id == entryId && e.UserId == userId);
 
-//                // Update tags
-//                entry.JournalTags.Clear();
-//                if (model.Tags != null && model.Tags.Any())
-//                {
-//                    foreach (var tagModel in model.Tags)
-//                    {
-//                        var tag = await _context.Tags.FindAsync(tagModel.Id);
-//                        if (tag != null)
-//                        {
-//                            entry.JournalTags.Add(new JournalTag
-//                            {
-//                                JournalEntry = entry,
-//                                Tag = tag,
-//                                AddedAt = DateTime.UtcNow
-//                            });
+                if (entry == null)
+                {
+                    return JournalResult.FailureResult("Entry not found or you don't have permission to delete it.");
+                }
 
-//                            // Update tag usage
-//                            tag.UsageCount++;
-//                            tag.LastUsed = DateTime.UtcNow;
-//                        }
-//                    }
-//                }
+                _context.JournalEntries.Remove(entry);
+                await _context.SaveChangesAsync();
 
-//                await _context.SaveChangesAsync();
-//                return true;
-//            }
-//            catch (Exception ex)
-//            {
-//                Console.WriteLine($"Error saving entry: {ex.Message}");
-//                return false;
-//            }
-//        }
+                return JournalResult.SuccessResult("Entry deleted successfully!");
+            }
+            catch (Exception ex)
+            {
+                return JournalResult.FailureResult($"Error deleting entry: {ex.Message}");
+            }
+        }
 
-//        public async Task<bool> DeleteEntryAsync(DateTime date)
-//        {
-//            try
-//            {
-//                var entry = await _context.JournalEntries
-//                    .FirstOrDefaultAsync(e => e.EntryDate.Date == date.Date);
+        // Get today's entry
+        public async Task<JournalEntry?> GetTodaysEntryAsync(int userId)
+        {
+            var today = DateTime.Today;
+            return await _context.JournalEntries
+                .FirstOrDefaultAsync(e => e.UserId == userId && e.EntryDate.Date == today);
+        }
 
-//                if (entry != null)
-//                {
-//                    _context.JournalEntries.Remove(entry);
-//                    await _context.SaveChangesAsync();
-//                    return true;
-//                }
+        // Get entry by date
+        public async Task<JournalEntry?> GetEntryByDateAsync(int userId, DateTime date)
+        {
+            var targetDate = date.Date;
+            return await _context.JournalEntries
+                .FirstOrDefaultAsync(e => e.UserId == userId && e.EntryDate.Date == targetDate);
+        }
 
-//                return false;
-//            }
-//            catch (Exception ex)
-//            {
-//                Console.WriteLine($"Error deleting entry: {ex.Message}");
-//                return false;
-//            }
-//        }
+        // Get entry by ID
+        public async Task<JournalEntry?> GetEntryByIdAsync(int entryId, int userId)
+        {
+            return await _context.JournalEntries
+                .FirstOrDefaultAsync(e => e.Id == entryId && e.UserId == userId);
+        }
 
-//        public async Task<bool> EntryExistsForDateAsync(DateTime date)
-//        {
-//            try
-//            {
-//                return await _context.JournalEntries
-//                    .AnyAsync(e => e.EntryDate.Date == date.Date);
-//            }
-//            catch (Exception ex)
-//            {
-//                Console.WriteLine($"Error checking entry: {ex.Message}");
-//                return false;
-//            }
-//        }
+        // Get all entries for a user
+        public async Task<List<JournalEntry>> GetEntriesByUserIdAsync(int userId)
+        {
+            return await _context.JournalEntries
+                .Where(e => e.UserId == userId)
+                .OrderByDescending(e => e.EntryDate)
+                .ToListAsync();
+        }
 
-//        public async Task<List<DateTime>> GetEntryDatesAsync(DateTime startDate, DateTime endDate)
-//        {
-//            try
-//            {
-//                return await _context.JournalEntries
-//                    .Where(e => e.EntryDate >= startDate && e.EntryDate <= endDate)
-//                    .Select(e => e.EntryDate.Date)
-//                    .ToListAsync();
-//            }
-//            catch (Exception ex)
-//            {
-//                Console.WriteLine($"Error getting entry dates: {ex.Message}");
-//                return new List<DateTime>();
-//            }
-//        }
+        // Get all entries (paginated)
+        public async Task<PaginatedEntriesResult> GetPaginatedEntriesAsync(int userId, int page = 1, int pageSize = 10)
+        {
+            try
+            {
+                var query = _context.JournalEntries
+                    .Where(e => e.UserId == userId)
+                    .OrderByDescending(e => e.EntryDate);
 
-//        private int CalculateWordCount(string text)
-//        {
-//            if (string.IsNullOrWhiteSpace(text))
-//                return 0;
+                var totalEntries = await query.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalEntries / (double)pageSize);
 
-//            var wordCount = 0;
-//            var isWord = false;
+                var entries = await query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
 
-//            foreach (var c in text)
-//            {
-//                if (char.IsLetterOrDigit(c))
-//                {
-//                    if (!isWord)
-//                    {
-//                        wordCount++;
-//                        isWord = true;
-//                    }
-//                }
-//                else
-//                {
-//                    isWord = false;
-//                }
-//            }
+                return new PaginatedEntriesResult
+                {
+                    Success = true,
+                    Entries = entries,
+                    CurrentPage = page,
+                    TotalPages = totalPages,
+                    TotalEntries = totalEntries
+                };
+            }
+            catch (Exception ex)
+            {
+                return new PaginatedEntriesResult
+                {
+                    Success = false,
+                    ErrorMessage = ex.Message
+                };
+            }
+        }
 
-//            return wordCount;
-//        }
-//    }
-//}
+        // Search entries
+        public async Task<List<JournalEntry>> SearchEntriesAsync(int userId, string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+                return await GetEntriesByUserIdAsync(userId);
+
+            return await _context.JournalEntries
+                .Where(e => e.UserId == userId &&
+                           (e.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                            e.Content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(e => e.EntryDate)
+                .ToListAsync();
+        }
+
+        // Filter entries by mood
+        public async Task<List<JournalEntry>> GetEntriesByMoodAsync(int userId, string mood)
+        {
+            return await _context.JournalEntries
+                .Where(e => e.UserId == userId &&
+                           (e.PrimaryMood == mood ||
+                            e.SecondaryMood1 == mood ||
+                            e.SecondaryMood2 == mood))
+                .OrderByDescending(e => e.EntryDate)
+                .ToListAsync();
+        }
+
+        // Filter entries by tag
+        public async Task<List<JournalEntry>> GetEntriesByTagAsync(int userId, string tag)
+        {
+            return await _context.JournalEntries
+                .Where(e => e.UserId == userId &&
+                           e.Tags != null &&
+                           e.Tags.Contains(tag, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(e => e.EntryDate)
+                .ToListAsync();
+        }
+
+        // Toggle favorite status
+        public async Task<JournalResult> ToggleFavoriteAsync(int entryId, int userId)
+        {
+            try
+            {
+                var entry = await _context.JournalEntries
+                    .FirstOrDefaultAsync(e => e.Id == entryId && e.UserId == userId);
+
+                if (entry == null)
+                {
+                    return JournalResult.FailureResult("Entry not found.");
+                }
+
+                entry.IsFavorite = !entry.IsFavorite;
+                entry.UpdatedAt = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                var entryModel = JournalEntryModel.FromEntity(entry);
+                return JournalResult.SuccessResult(
+                    entry.IsFavorite ? "Added to favorites!" : "Removed from favorites!",
+                    entryModel
+                );
+            }
+            catch (Exception ex)
+            {
+                return JournalResult.FailureResult($"Error: {ex.Message}");
+            }
+        }
+
+        // Get entries by date range
+        public async Task<List<JournalEntry>> GetEntriesByDateRangeAsync(int userId, DateTime startDate, DateTime endDate)
+        {
+            return await _context.JournalEntries
+                .Where(e => e.UserId == userId &&
+                           e.EntryDate.Date >= startDate.Date &&
+                           e.EntryDate.Date <= endDate.Date)
+                .OrderByDescending(e => e.EntryDate)
+                .ToListAsync();
+        }
+
+        // Get calendar entries for a specific month
+        public async Task<Dictionary<DateTime, bool>> GetCalendarEntriesAsync(int userId, int year, int month)
+        {
+            var startDate = new DateTime(year, month, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+
+            var entries = await _context.JournalEntries
+                .Where(e => e.UserId == userId &&
+                           e.EntryDate.Date >= startDate &&
+                           e.EntryDate.Date <= endDate)
+                .Select(e => e.EntryDate.Date)
+                .ToListAsync();
+
+            var result = new Dictionary<DateTime, bool>();
+            for (var date = startDate; date <= endDate; date = date.AddDays(1))
+            {
+                result[date] = entries.Contains(date);
+            }
+
+            return result;
+        }
+
+        // Get entry count by user
+        public async Task<int> GetEntryCountAsync(int userId)
+        {
+            return await _context.JournalEntries
+                .Where(e => e.UserId == userId)
+                .CountAsync();
+        }
+
+        // Get total word count by user
+        public async Task<int> GetTotalWordCountAsync(int userId)
+        {
+            var entries = await _context.JournalEntries
+                .Where(e => e.UserId == userId)
+                .ToListAsync();
+
+            return entries.Sum(e => e.WordCount);
+        }
+
+        // Get favorite entries
+        public async Task<List<JournalEntry>> GetFavoriteEntriesAsync(int userId)
+        {
+            return await _context.JournalEntries
+                .Where(e => e.UserId == userId && e.IsFavorite)
+                .OrderByDescending(e => e.EntryDate)
+                .ToListAsync();
+        }
+
+        // Get entries by category
+        public async Task<List<JournalEntry>> GetEntriesByCategoryAsync(int userId, string category)
+        {
+            return await _context.JournalEntries
+                .Where(e => e.UserId == userId && e.Category == category)
+                .OrderByDescending(e => e.EntryDate)
+                .ToListAsync();
+        }
+
+        // Get all categories for a user
+        public async Task<List<string>> GetCategoriesAsync(int userId)
+        {
+            return await _context.JournalEntries
+                .Where(e => e.UserId == userId && !string.IsNullOrEmpty(e.Category))
+                .Select(e => e.Category!)
+                .Distinct()
+                .ToListAsync();
+        }
+
+        // Get all tags for a user
+        public async Task<List<string>> GetTagsAsync(int userId)
+        {
+            var entries = await _context.JournalEntries
+                .Where(e => e.UserId == userId && !string.IsNullOrEmpty(e.Tags))
+                .ToListAsync();
+
+            var allTags = new List<string>();
+            foreach (var entry in entries)
+            {
+                allTags.AddRange(entry.GetTagsList());
+            }
+
+            return allTags.Distinct().ToList();
+        }
+
+        // Get mood statistics
+        public async Task<Dictionary<string, int>> GetMoodStatisticsAsync(int userId)
+        {
+            var entries = await _context.JournalEntries
+                .Where(e => e.UserId == userId)
+                .ToListAsync();
+
+            var moodStats = new Dictionary<string, int>();
+
+            foreach (var entry in entries)
+            {
+                // Count primary mood
+                if (moodStats.ContainsKey(entry.PrimaryMood))
+                    moodStats[entry.PrimaryMood]++;
+                else
+                    moodStats[entry.PrimaryMood] = 1;
+
+                // Count secondary moods
+                if (!string.IsNullOrEmpty(entry.SecondaryMood1))
+                {
+                    if (moodStats.ContainsKey(entry.SecondaryMood1))
+                        moodStats[entry.SecondaryMood1]++;
+                    else
+                        moodStats[entry.SecondaryMood1] = 1;
+                }
+
+                if (!string.IsNullOrEmpty(entry.SecondaryMood2))
+                {
+                    if (moodStats.ContainsKey(entry.SecondaryMood2))
+                        moodStats[entry.SecondaryMood2]++;
+                    else
+                        moodStats[entry.SecondaryMood2] = 1;
+                }
+            }
+
+            return moodStats;
+        }
+
+        // Helper method to calculate word count
+        private int CalculateWordCount(string content)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+                return 0;
+
+            return content.Split(new[] { ' ', '\n', '\r', '\t' },
+                StringSplitOptions.RemoveEmptyEntries).Length;
+        }
+    }
+
+    // Remove or rename this class since we're using Data.Models.JournalResult
+    // Rename it to ServiceJournalResult to avoid conflict
+    public class ServiceJournalResult
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public JournalEntry? Entry { get; set; }
+        public List<JournalEntry>? Entries { get; set; }
+    }
+
+    public class PaginatedEntriesResult
+    {
+        public bool Success { get; set; }
+        public List<JournalEntry> Entries { get; set; } = new();
+        public int CurrentPage { get; set; }
+        public int TotalPages { get; set; }
+        public int TotalEntries { get; set; }
+        public string? ErrorMessage { get; set; }
+    }
+}

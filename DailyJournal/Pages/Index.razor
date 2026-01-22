@@ -1,9 +1,19 @@
 ﻿@page "/"
 @inject NavigationManager Navigation
+@using Microsoft.Maui.Storage
 
 @code {
     protected override void OnInitialized()
     {
-        Navigation.NavigateTo("/register", true);
+        int userId = Preferences.Get("UserId", 0); // 0 if not logged in
+
+        if (userId == 0)
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            Navigation.NavigateTo("/dashboard", true);
+        }
     }
 }

@@ -1,0 +1,293 @@
+﻿@page "/today"
+@page "/today-journal"
+@using DailyJournal.Services
+@using DailyJournal.Data.Constants
+@using DailyJournal.Data.Models
+@using DailyJournal.Data.Entities
+@using Microsoft.AspNetCore.Components.Web
+@using Markdig
+@using Microsoft.JSInterop
+@inject JournalService JournalService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<style>
+    /* Custom Design - No Bootstrap */
+    .today-container {
+        min-height: 100vh;
+        background-color: #f8fafc;
+        padding: 2rem 1rem;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .today-card {
+        max-width: 900px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .today-header {
+        padding: 2rem;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .header-left h1 {
+        font-size: 1.875rem;
+        color: #1e293b;
+        margin: 0;
+    }
+
+    .header-left p {
+        color: #64748b;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .action-btn {
+        padding: 0.625rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: none;
+    }
+
+    .edit-btn {
+        background: #eff6ff;
+        color: #2563eb;
+    }
+
+        .edit-btn:hover {
+            background: #dbeafe;
+        }
+
+    .delete-btn {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+        .delete-btn:hover {
+            background: #fee2e2;
+        }
+
+    /* Rich Text Editor Simulation */
+    .editor-container {
+        padding: 2rem;
+    }
+
+    .rich-editor {
+        width: 100%;
+        min-height: 300px;
+        padding: 1rem;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        outline: none;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        transition: border-color 0.2s;
+    }
+
+        .rich-editor:focus {
+            border-color: #3b82f6;
+        }
+
+    /* Mood Tags */
+    .mood-tag {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .mood-positive {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .mood-neutral {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .mood-negative {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    /* Modal Styling */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 16px;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+    }
+
+    .no-entry-container {
+        padding: 4rem 2rem;
+        text-align: center;
+    }
+
+    .no-entry-icon {
+        font-size: 4rem;
+        color: #cbd5e1;
+        margin-bottom: 1.5rem;
+    }
+</style>
+
+<div class="today-container">
+    <div class="today-card">
+        <div class="today-header">
+            <div class="header-left">
+                <h1>📖 Today's Journal</h1>
+                <p>
+                    <i class="bi bi-calendar3"></i>
+                    @DateTime.Today.ToString("dddd, MMMM d, yyyy")
+                </p>
+            </div>
+
+            @if (Entry != null)
+            {
+                <div class="header-actions">
+                    <button class="action-btn edit-btn" @onclick="NavigateToEdit">
+                        <i class="bi bi-pencil-square"></i> Edit Entry
+                    </button>
+                    <button class="action-btn delete-btn" @onclick="@(() => ShowDeleteModal = true)">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </div>
+            }
+        </div>
+
+        @if (IsLoading)
+        {
+            <div style="padding: 3rem; text-align: center;">
+                <div class="spinner"></div> <p>Loading your thoughts...</p>
+            </div>
+        }
+        else if (Entry == null)
+        {
+            <div class="no-entry-container">
+                <div class="no-entry-icon"><i class="bi bi-journal-text"></i></div>
+                <h2>Empty Page</h2>
+                <p style="color: #64748b; margin-bottom: 2rem;">Today is a new story waiting to be written.</p>
+                <button class="action-btn" style="background: #2563eb; color: white; margin: 0 auto;" @onclick="NavigateToCreate">
+                    <i class="bi bi-plus-circle"></i> Create Today's Entry
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="editor-container">
+                <div style="margin-bottom: 1.5rem;">
+                    <h2 style="font-size: 2rem; color: #1e293b; margin-bottom: 0.5rem;">@Entry.Title</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span class="mood-tag @GetMoodClass(Entry.PrimaryMood)">@Entry.PrimaryMood</span>
+                        @if (Entry.IsFavorite)
+                        {
+                            <i class="bi bi-star-fill" style="color: #f59e0b;"></i>
+                        }
+                    </div>
+                </div>
+
+                <div class="rich-editor">
+                    @((MarkupString)Markdig.Markdown.ToHtml(Entry.Content ?? ""))
+                </div>
+
+                <div style="margin-top: 2rem; border-top: 1px solid #f1f5f9; padding-top: 1rem; color: #94a3b8; font-size: 0.875rem;">
+                    <span>@Entry.WordCount words</span> • <span>@CalculateReadingTime(Entry.WordCount) min read</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@if (ShowDeleteModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <div style="color: #dc2626; font-size: 3rem; margin-bottom: 1rem;"><i class="bi bi-exclamation-circle"></i></div>
+            <h3 style="margin-bottom: 1rem;">Delete Entry?</h3>
+            <p style="color: #64748b; margin-bottom: 2rem;">This will permanently remove your journal for today. This cannot be undone.</p>
+            <div style="display: flex; gap: 1rem;">
+                <button class="action-btn" style="flex: 1; background: #f1f5f9; color: #475569;" @onclick="@(() => ShowDeleteModal = false)">Cancel</button>
+                <button class="action-btn" style="flex: 1; background: #dc2626; color: white;" @onclick="HandleDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private JournalEntry? Entry = null;
+    private bool IsLoading = true;
+    private bool ShowDeleteModal = false;
+    private string ErrorMessage = "";
+
+    protected override async Task OnInitializedAsync() => await LoadTodaysEntry();
+
+    private async Task LoadTodaysEntry()
+    {
+        IsLoading = true;
+        try
+        {
+            var userId = 1;
+            Entry = await JournalService.GetTodaysEntryAsync(userId);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Failed to load entry.";
+            Console.WriteLine(ex.Message);
+        }
+        finally { IsLoading = false; }
+    }
+
+    private void NavigateToEdit() => Navigation.NavigateTo($"/journal/{DateTime.Today:yyyy-MM-dd}");
+    private void NavigateToCreate() => Navigation.NavigateTo($"/journal/{DateTime.Today:yyyy-MM-dd}");
+
+    private async Task HandleDelete()
+    {
+        if (Entry == null) return;
+        var result = await JournalService.DeleteEntryAsync(Entry.Id, 1);
+        if (result.Success) { Entry = null; ShowDeleteModal = false; }
+    }
+
+    private string GetMoodClass(string mood)
+    {
+        if (string.IsNullOrEmpty(mood)) return "mood-neutral";
+        if (Moods.Positive.GetAll().Contains(mood)) return "mood-positive";
+        if (Moods.Negative.GetAll().Contains(mood)) return "mood-negative";
+        return "mood-neutral";
+    }
+
+    private string CalculateReadingTime(int wordCount) => Math.Max(1, (int)Math.Ceiling(wordCount / 200.0)).ToString();
+}
