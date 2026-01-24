@@ -1,34 +1,45 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.Maui.Storage
+@using MudBlazor
 @inject NavigationManager Navigation
 
-<div class="page">
-    <div class="sidebar">
+<!-- MudBlazor providers: SELF-CLOSING in MAUI Blazor -->
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
 
-        @if (IsLoggedIn)
-        {
-        <NavMenu />
-            
-        }
-        else
-        {
-            <ul class="sidebar-links">
-                <li><a href="/login">Login</a></li>
-                <li><a href="/register">Register</a></li>
-            </ul>
-        }
-    </div>
+<MudLayout>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+    <!-- SIDEBAR -->
+    <div class="page">
+        <div class="sidebar">
+            @if (IsLoggedIn)
+            {
+                <NavMenu />
+            }
+            else
+            {
+                <ul class="sidebar-links">
+                    <li><a href="/login">Login</a></li>
+                    <li><a href="/register">Register</a></li>
+                </ul>
+            }
         </div>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+        <!-- MAIN CONTENT -->
+        <MudMainContent>
+            <div class="top-row px-4 mb-4">
+                <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            </div>
+
+            <article class="content px-4">
+                @Body
+            </article>
+        </MudMainContent>
+    </div>
+
+</MudLayout>
 
 @code {
     private bool IsLoggedIn = false;
@@ -41,11 +52,9 @@
 
     private void Logout()
     {
-        // Remove stored login info
         Preferences.Remove("UserId");
         Preferences.Remove("UserName");
 
-        // Redirect to login page
         Navigation.NavigateTo("/login", true);
     }
 }

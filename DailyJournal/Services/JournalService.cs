@@ -471,6 +471,139 @@ namespace DailyJournal.Services
             return content.Split(new[] { ' ', '\n', '\r', '\t' },
                 StringSplitOptions.RemoveEmptyEntries).Length;
         }
+        public async Task<PaginatedEntriesResult> SearchEntriesAsync(
+    int userId,
+    string? searchTerm = null,
+    string? mood = null,
+    string? tag = null,
+    string? category = null,
+    DateTime? startDate = null,
+    DateTime? endDate = null,
+    bool? isFavorite = null,
+    int page = 1,
+    int pageSize = 10)
+        {
+            try
+            {
+                var query = _context.JournalEntries
+                    .Where(e => e.UserId == userId)
+                    .AsQueryable();
+
+                // Apply search term filter
+                if (!string.IsNullOrWhiteSpace(searchTerm))
+                {
+                    query = query.Where(e =>
+                        e.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                        e.Content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                        (e.Tags != null && e.Tags.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                    );
+                }
+
+                // Apply mood filter
+                if (!string.IsNullOrWhiteSpace(mood))
+                {
+                    query = query.Where(e =>
+                        e.PrimaryMood == mood ||
+                        e.SecondaryMood1 == mood ||
+                        e.SecondaryMood2 == mood
+                    );
+                }
+
+                // Apply tag filter
+                if (!string.IsNullOrWhiteSpace(tag))
+                {
+                    query = query.Where(e =>
+                        e.Tags != null &&
+                        e.Tags.Contains(tag, StringComparison.OrdinalIgnoreCase)
+                    );
+                }
+
+                // Apply category filter
+                if (!string.IsNullOrWhiteSpace(category))
+                {
+                    query = query.Where(e => e.Category == category);
+                }
+
+                // Apply date range filter
+                if (startDate.HasValue)
+                {
+                    query = query.Where(e => e.EntryDate.Date >= startDate.Value.Date);
+                }
+
+                if (endDate.HasValue)
+                {
+                    query = query.Where(e => e.EntryDate.Date <= endDate.Value.Date);
+                }
+
+                // Apply favorite filter
+                if (isFavorite.HasValue)
+                {
+                    query = query.Where(e => e.IsFavorite == isFavorite.Value);
+                }
+
+                // Get total count
+                var totalEntries = await query.CountAsync();
+                var totalPages = (int)Math.Ceiling(totalEntries / (double)pageSize);
+
+                // Apply pagination
+                var entries = await query
+                    .OrderByDescending(e => e.EntryDate)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                return new PaginatedEntriesResult
+                {
+                    Success = true,
+                    Entries = entries,
+                    CurrentPage = page,
+                    TotalPages = totalPages,
+                    TotalEntries = totalEntries
+                };
+            }
+            catch (Exception ex)
+            {
+                return new PaginatedEntriesResult
+                {
+                    Success = false,
+                    ErrorMessage = ex.Message
+                };
+            }
+        }
+
+        // Get all available moods for filtering
+        public List<string> GetAllMoodsForFilter()
+        {
+            return Moods.GetAllMoods().ToList();
+        }
+
+        // Get all available categories for filtering
+        public async Task<List<string>> GetDistinctCategoriesAsync(int userId)
+        {
+            return await _context.JournalEntries
+                .Where(e => e.UserId == userId && !string.IsNullOrEmpty(e.Category))
+                .Select(e => e.Category!)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToListAsync();
+        }
+
+        // Get all distinct tags for filtering
+        public async Task<List<string>> GetDistinctTagsAsync(int userId)
+        {
+            var entries = await _context.JournalEntries
+                .Where(e => e.UserId == userId && !string.IsNullOrEmpty(e.Tags))
+                .ToListAsync();
+
+            var allTags = new List<string>();
+            foreach (var entry in entries)
+            {
+                var tags = entry.GetTagsList();
+                allTags.AddRange(tags);
+            }
+
+            return allTags.Distinct().OrderBy(t => t).ToList();
+        }
     }
 
     // Remove or rename this class since we're using Data.Models.JournalResult
@@ -492,4 +625,7 @@ namespace DailyJournal.Services
         public int TotalEntries { get; set; }
         public string? ErrorMessage { get; set; }
     }
+
+
+
 }

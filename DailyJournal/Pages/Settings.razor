@@ -1,0 +1,70 @@
+﻿@page "/settings"
+@using DailyJournal.Services
+@using MudBlazor
+@inject ThemeService ThemeService
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudText Typo="Typo.h4" Class="mb-6">Settings</MudText>
+
+    <MudCard>
+        <MudCardContent>
+            @* Fix: Added T="string" to the list *@
+            <MudList T="string">
+                <MudListItem T="string">
+                    <div class="d-flex align-center justify-space-between">
+                        <MudText>Appearance Mode</MudText>
+                        <MudSelect T="string" 
+                                   Value="@ThemeService.CurrentTheme.ThemeType" 
+                                   ValueChanged="OnThemeTypeChanged"
+                                   Variant="Variant.Outlined" 
+                                   Style="width: 200px">
+                            <MudSelectItem Value="@("light")">Light</MudSelectItem>
+                            <MudSelectItem Value="@("dark")">Dark</MudSelectItem>
+                            <MudSelectItem Value="@("black")">OLED Black</MudSelectItem>
+                        </MudSelect>
+                    </div>
+                </MudListItem>
+
+                <MudListItem T="string">
+                    <div class="d-flex align-center justify-space-between">
+                        <MudText>Primary Color</MudText>
+                        <div class="d-flex gap-2">
+                            @foreach (var color in ColorPresets)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Circle"
+                                              Style="@($"color: {color.Value}")"
+                                              OnClick="@(() => ThemeService.SetPrimaryColor(color.Key))" />
+                            }
+                        </div>
+                    </div>
+                </MudListItem>
+            </MudList>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private Dictionary<string, string> ColorPresets = new()
+    {
+        ["Purple"] = "#7E57C2",
+        ["Blue"] = "#2196F3",
+        ["Teal"] = "#009688"
+    };
+
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += StateHasChanged;
+    }
+
+    private async Task OnThemeTypeChanged(string newType)
+    {
+        await ThemeService.SetThemeType(newType);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= StateHasChanged;
+    }
+}

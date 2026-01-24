@@ -1,0 +1,43 @@
+﻿@using MudBlazor
+@using DailyJournal.Data.Entities
+
+<MudDialog>
+    <DialogContent>
+        <div class="text-center">
+            <MudIcon Icon="@Icons.Material.Filled.Warning"
+                     Color="Color.Error"
+                     Size="Size.Large"
+                     Class="mb-3" />
+
+            <MudText Typo="Typo.h6" Class="mb-2">Delete Memory?</MudText>
+
+            <MudText Typo="Typo.body2" Class="mb-4">
+                @* Changed @Context.Entry to @Entry *@
+                This entry titled "<strong>@Entry.Title</strong>" from
+                <strong>@Entry.EntryDate.ToString("MMMM dd, yyyy")</strong>
+                will be removed forever.
+            </MudText>
+        </div>
+    </DialogContent>
+
+    <DialogActions>
+        @* Changed Color.Default to Color.Inherit for better compatibility *@
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Color="Color.Inherit">
+            Keep it
+        </MudButton>
+        <MudButton OnClick="Submit" Variant="Variant.Filled" Color="Color.Error">
+            Delete Permanently
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = default!; // Use IMudDialogInstance (Interface)
+
+    [Parameter]
+    public JournalEntry Entry { get; set; } = default!;
+
+    void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    void Cancel() => MudDialog.Cancel();
+}

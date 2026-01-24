@@ -2,6 +2,57 @@
 
 namespace DailyJournal.Data.Models
 {
+    public class ExportRequest
+    {
+        public int UserId { get; set; }
+        public DateTime? StartDate { get; set; } = DateTime.Today.AddDays(-30);
+        public DateTime? EndDate { get; set; } = DateTime.Today;
+        public string Title { get; set; } = "Journal Entries";
+        public string Subtitle { get; set; } = "Personal Reflections";
+        public bool IncludeMoods { get; set; } = true;
+        public bool IncludeStats { get; set; } = true;
+        public bool IncludeTags { get; set; } = true;
+
+        // Optional: Add these properties if you want more export options
+        public bool IncludeCoverPage { get; set; } = true;
+        public bool IncludeTableOfContents { get; set; } = true;
+        public string PaperSize { get; set; } = "A4";
+        public string PageOrientation { get; set; } = "Portrait";
+        public string FontSize { get; set; } = "12pt";
+        public string FontFamily { get; set; } = "Arial";
+    }
+
+    public class ExportResult
+    {
+        public bool Success { get; set; }
+        public string FileName { get; set; }
+        public byte[] Content { get; set; }
+        public string ContentType { get; set; }
+        public int EntryCount { get; set; }
+        public string ErrorMessage { get; set; }
+        public DateTime ExportDate { get; set; } = DateTime.Now;
+
+        public static ExportResult SuccessResult(string fileName, byte[] content, int entryCount)
+        {
+            return new ExportResult
+            {
+                Success = true,
+                FileName = fileName,
+                Content = content,
+                ContentType = "application/pdf",
+                EntryCount = entryCount
+            };
+        }
+
+        public static ExportResult ErrorResult(string errorMessage)
+        {
+            return new ExportResult
+            {
+                Success = false,
+                ErrorMessage = errorMessage
+            };
+        }
+    }
     public class ExportModel
     {
         public DateTime StartDate { get; set; } = DateTime.Today.AddMonths(-1);

@@ -10,20 +10,35 @@
         <h1 class="dashboard-title">Dashboard</h1>
         <p class="dashboard-subtitle">Welcome back! Here's your journaling overview</p>
         <div class="dashboard-actions">
-            <button class="btn btn-primary" @onclick="NavigateToToday">
+            <button id="btnToday" class="btn btn-primary">
                 <i class="bi bi-plus-circle me-1"></i>Write Today's Entry
             </button>
-            <button class="btn btn-outline-secondary" @onclick="RefreshDashboard">
+            <button id="btnRefresh" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-clockwise me-1"></i>Refresh
             </button>
         </div>
     </div>
+  
+
+    <script>
+        // Navigate to today's entry
+        document.getElementById("btnToday").addEventListener("click", function() {
+            const today = new Date().toISOString().split('T')[0]; // yyyy-MM-dd
+            window.location.href = `/journal/${today}`;
+        });
+
+        // Refresh the page
+        document.getElementById("btnRefresh").addEventListener("click", function() {
+            location.reload();
+        });
+    </script>
+
 
     <div class="dashboard-filters mb-4">
         <div class="row">
             <div class="col-md-3">
                 <label class="form-label">Date Range</label>
-                <select @bind="SelectedDateRange" class="form-select">
+                <select @bind="SelectedDateRange" class="form-select" @onchange="HandleDateRangeChange">
                     <option value="7">Last 7 Days</option>
                     <option value="30">Last 30 Days</option>
                     <option value="90">Last 3 Months</option>
@@ -209,7 +224,7 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">Recent Entries</h5>
-                        <a href="/entries" class="btn btn-sm btn-outline-primary">View All</a>
+                        <a href="/my-journals" class="btn btn-sm btn-outline-primary">View All</a>
                     </div>
                     <div class="card-body">
                         @if (RecentEntries.Any())
@@ -283,9 +298,12 @@
             // Load statistics
             Statistics = await DashboardService.GetDashboardStatisticsAsync(userId);
 
-            // Load recent entries
-            // var entriesResult = await JournalService.GetEntriesAsync(userId, 1, 5);
-            // RecentEntries = entriesResult.Entries;
+            // Load recent entries (you need to implement this in JournalService)
+            // RecentEntries = await JournalService.GetRecentEntriesAsync(userId, 5);
+
+            // Alternative: Use GetPaginatedEntriesAsync if available
+            var entriesResult = await JournalService.GetPaginatedEntriesAsync(userId, 1, 5);
+            RecentEntries = entriesResult.Entries;
         }
         catch (Exception ex)
         {
@@ -300,7 +318,19 @@
 
     private async Task ApplyFilters()
     {
-        // Update date range based on selection
+        await LoadDashboardData();
+    }
+
+    private async Task HandleRefresh()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task HandleDateRangeChange(ChangeEventArgs e)
+    {
+        SelectedDateRange = e.Value?.ToString() ?? "30";
+
+        // Update dates based on selection
         if (SelectedDateRange != "0")
         {
             var days = int.Parse(SelectedDateRange);
@@ -311,11 +341,6 @@
         await LoadDashboardData();
     }
 
-    private async Task RefreshDashboard()
-    {
-        await LoadDashboardData();
-    }
-
     private void NavigateToToday()
     {
         Navigation.NavigateTo($"/journal/{DateTime.Today:yyyy-MM-dd}");
@@ -323,12 +348,12 @@
 
     private void ViewEntry(int entryId)
     {
-        Navigation.NavigateTo($"/entry/{entryId}");
+        Navigation.NavigateTo($"/journal/{entryId}");
     }
 
     private void ViewTagEntries(string tag)
     {
-        Navigation.NavigateTo($"/entries?tag={tag}");
+        Navigation.NavigateTo($"/my-journals?tag={tag}");
     }
 
     private string GetContentPreview(string content)
@@ -593,38 +618,53 @@
         padding: 25px;
     }
 
-   
-
-   
-
-    .dashboard-actions {
-        flex-direction: column;
+    /* Ensure buttons are clickable */
+    .btn, .tag-cloud-item, .recent-entry {
+        cursor: pointer;
+        user-select: none;
     }
 
-        .dashboard-actions .btn {
-            width: 100%;
-            margin-bottom: 10px;
+    /* Fix any z-index issues */
+    .stat-card, .card {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Remove any pointer-events blocking */
+    .dashboard-page * {
+        pointer-events: auto;
+    }
+
+    /* Responsive design */
+    @@media (max-width: 768px) {
+        .dashboard-actions {
+            flex-direction: column;
         }
 
-    .stat-card {
-        margin-bottom: 20px;
-    }
+            .dashboard-actions .btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
 
-    .recent-entry {
-        flex-direction: column;
-        text-align: center;
-    }
+        .stat-card {
+            margin-bottom: 20px;
+        }
 
-    .entry-date {
-        margin-right: 0;
-        margin-bottom: 15px;
-        flex-direction: row;
-        gap: 10px;
-    }
+        .recent-entry {
+            flex-direction: column;
+            text-align: center;
+        }
 
-    .date-day {
-        font-size: 1.5rem;
-    }
+        .entry-date {
+            margin-right: 0;
+            margin-bottom: 15px;
+            flex-direction: row;
+            gap: 10px;
+            justify-content: center;
+        }
 
+        .date-day {
+            font-size: 1.5rem;
+        }
     }
 </style>
