@@ -1,70 +1,235 @@
 ﻿@page "/settings"
+@using DailyJournal.Data.Entities
 @using DailyJournal.Services
 @using MudBlazor
 @inject ThemeService ThemeService
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+@inject UserService UserService
 @inject ISnackbar Snackbar
 @implements IDisposable
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
-    <MudText Typo="Typo.h4" Class="mb-6">Settings</MudText>
+    <div class="d-flex align-center mb-6">
+        <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Large" Color="Color.Primary" Class="mr-3" />
+        <MudText Typo="Typo.h4" Class="font-weight-bold">Settings</MudText>
+    </div>
 
-    <MudCard>
-        <MudCardContent>
-            @* Fix: Added T="string" to the list *@
-            <MudList T="string">
-                <MudListItem T="string">
-                    <div class="d-flex align-center justify-space-between">
-                        <MudText>Appearance Mode</MudText>
-                        <MudSelect T="string" 
-                                   Value="@ThemeService.CurrentTheme.ThemeType" 
-                                   ValueChanged="OnThemeTypeChanged"
-                                   Variant="Variant.Outlined" 
-                                   Style="width: 200px">
-                            <MudSelectItem Value="@("light")">Light</MudSelectItem>
-                            <MudSelectItem Value="@("dark")">Dark</MudSelectItem>
-                            <MudSelectItem Value="@("black")">OLED Black</MudSelectItem>
-                        </MudSelect>
-                    </div>
-                </MudListItem>
+    <MudGrid Spacing="3">
+        <MudItem xs="12">
+            <MudCard Elevation="3" Class="rounded-lg">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudIcon Icon="@Icons.Material.Filled.Palette" Color="Color.Primary" />
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Appearance</MudText>
+                        <MudText Typo="Typo.body2">Personalize your visual experience</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudList T="object">
+                        <MudListItem T="object">
+                            <div class="d-flex align-center justify-space-between">
+                                <div class="d-flex align-center gap-3">
+                                    <MudIcon Icon="@Icons.Material.Filled.DarkMode" />
+                                    <div>
+                                        <MudText>Theme Mode</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@CurrentThemeName</MudText>
+                                    </div>
+                                </div>
+                                <MudSelect T="AppTheme" @bind-Value="SelectedTheme" Variant="Variant.Outlined" Style="min-width: 160px;">
+                                    <MudSelectItem Value="AppTheme.Light">Light</MudSelectItem>
+                                    <MudSelectItem Value="AppTheme.Dark">Dark</MudSelectItem>
+                                    <MudSelectItem Value="AppTheme.Black">Black</MudSelectItem>
+                                    <MudSelectItem Value="AppTheme.System">System</MudSelectItem>
+                                </MudSelect>
+                            </div>
+                        </MudListItem>
 
-                <MudListItem T="string">
-                    <div class="d-flex align-center justify-space-between">
-                        <MudText>Primary Color</MudText>
-                        <div class="d-flex gap-2">
-                            @foreach (var color in ColorPresets)
-                            {
-                                <MudIconButton Icon="@Icons.Material.Filled.Circle"
-                                              Style="@($"color: {color.Value}")"
-                                              OnClick="@(() => ThemeService.SetPrimaryColor(color.Key))" />
-                            }
-                        </div>
-                    </div>
-                </MudListItem>
-            </MudList>
-        </MudCardContent>
-    </MudCard>
+                        <MudListItem T="object">
+                            <div class="d-flex align-center justify-space-between">
+                                <div class="d-flex align-center gap-3">
+                                    <MudIcon Icon="@Icons.Material.Filled.ColorLens" />
+                                    <MudText>Accent Color</MudText>
+                                </div>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var color in ColorOptions)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Circle"
+                                                       OnClick="@(() => SetPrimaryColor(color.Item1))"
+                                                       Color="StringToColor(color.Item1)"
+                                                       Class="@($"color-swatch {(ThemeService.CurrentSettings.PrimaryColor == color.Item1 ? "selected" : "")}")"
+                                                       Title="@color.Item2" />
+                                    }
+                                </div>
+                            </div>
+                        </MudListItem>
+                    </MudList>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="ResetTheme" StartIcon="@Icons.Material.Filled.Restore">
+                        Reset to Default
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudCard Elevation="3" Class="rounded-lg">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Primary" />
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Profile Information</MudText>
+                        <MudText Typo="Typo.body2">Manage your account details</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_userName" Label="Username" Variant="Variant.Outlined" AdornmentIcon="@Icons.Material.Filled.AccountCircle" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_email" Label="Email Address" Variant="Variant.Outlined" AdornmentIcon="@Icons.Material.Filled.Email" />
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveProfile" StartIcon="@Icons.Material.Filled.Save" Class="px-8">
+                        Save Changes
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudPaper Class="pa-6 rounded-lg" Elevation="0" Outlined="true" Style="border: 1px dashed var(--mud-palette-error);">
+                <MudGrid AlignItems="AlignItems.Center">
+                    <MudItem xs="12" sm="8">
+                        <MudText Typo="Typo.h6">Sign Out</MudText>
+                        <MudText Typo="Typo.body2">Wipe session data and exit.</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="4" Class="d-flex justify-sm-end">
+                        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Logout" OnClick="HandleLogout">
+                            Logout
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
 </MudContainer>
 
 @code {
-    private Dictionary<string, string> ColorPresets = new()
+    private string _userName = "";
+    private string _email = "";
+    private User? _currentUser;
+
+    private AppTheme SelectedTheme
     {
-        ["Purple"] = "#7E57C2",
-        ["Blue"] = "#2196F3",
-        ["Teal"] = "#009688"
+        get => ThemeService.CurrentSettings.Theme;
+        set => ThemeService.SetTheme(value);
+    }
+
+    private string CurrentThemeName => SelectedTheme.ToString();
+
+    private List<(string, string)> ColorOptions = new()
+    {
+        ("Primary", "Lavender"),
+        ("Info", "Blue"),
+        ("Success", "Green"),
+        ("Secondary", "Purple"),
+        ("Warning", "Orange"),
+        ("Tertiary", "Teal"),
+        ("Error", "Pink")
     };
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        ThemeService.OnThemeChanged += StateHasChanged;
+        // 1. Load data from Preferences first
+        var savedName = Preferences.Get("UserName", "User");
+
+        // 2. Fetch fresh user entity from database
+        _currentUser = await UserService.GetUserByUsernameAsync(savedName);
+
+        if (_currentUser != null)
+        {
+            _userName = _currentUser.Username;
+            _email = _currentUser.Email;
+        }
+        else
+        {
+            _userName = savedName;
+            _email = Preferences.Get("UserEmail", "No email set");
+        }
+
+        // 3. Initialize Theme
+        await ThemeService.InitializeAsync();
+        ThemeService.ThemeChanged += OnThemeChanged;
     }
 
-    private async Task OnThemeTypeChanged(string newType)
+    private void OnThemeChanged(AppTheme theme) => InvokeAsync(StateHasChanged);
+
+    private async Task SetPrimaryColor(string color) => await ThemeService.SetPrimaryColor(color);
+
+    private void ResetTheme()
     {
-        await ThemeService.SetThemeType(newType);
+        ThemeService.ResetToDefault();
+        Snackbar.Add("Theme reset to default", Severity.Info);
     }
 
-    public void Dispose()
+    private async Task SaveProfile()
     {
-        ThemeService.OnThemeChanged -= StateHasChanged;
+        if (_currentUser == null)
+        {
+            Snackbar.Add("Error: Could not locate user record.", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            // Update Database Entity
+            _currentUser.Username = _userName;
+            _currentUser.Email = _email;
+            await UserService.UpdateUserAsync(_currentUser);
+
+            // Update Local Session Storage
+            Preferences.Set("UserName", _userName);
+            Preferences.Set("UserEmail", _email);
+
+            Snackbar.Add("Profile updated successfully!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Update failed: {ex.Message}", Severity.Error);
+        }
     }
+
+    private async Task HandleLogout()
+    {
+        bool? result = await DialogService.ShowMessageBox("Logout", "Are you sure you want to sign out?", yesText: "Logout", cancelText: "Cancel");
+        if (result == true)
+        {
+            Preferences.Clear();
+            Navigation.NavigateTo("/", true);
+        }
+    }
+
+    private Color StringToColor(string colorName) => colorName switch
+    {
+        "Primary" => Color.Primary,
+        "Info" => Color.Info,
+        "Success" => Color.Success,
+        "Secondary" => Color.Secondary,
+        "Warning" => Color.Warning,
+        "Tertiary" => Color.Tertiary,
+        "Error" => Color.Error,
+        _ => Color.Default
+    };
+
+    public void Dispose() => ThemeService.ThemeChanged -= OnThemeChanged;
 }
+
+

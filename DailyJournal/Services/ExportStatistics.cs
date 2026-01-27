@@ -144,3 +144,4 @@ public class ExportStatistics
         return Math.Round((TotalEntries / (double)days) * 100, 1);
     }
 }
+

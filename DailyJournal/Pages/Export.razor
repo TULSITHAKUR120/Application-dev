@@ -9,851 +9,235 @@
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 @implements IDisposable
+
 <style>
-    /* Lavender Theme Export Page Styles */
-
-    :root {
-        --lavender-50: #faf8ff;
-        --lavender-100: #f3eeff;
-        --lavender-200: #e9ddff;
-        --lavender-300: #d9c2ff;
-        --lavender-400: #c49dff;
-        --lavender-500: #a970ff;
-        --lavender-600: #9654f4;
-        --lavender-700: #7c3aed;
-        --lavender-800: #6b21a8;
-        --lavender-900: #581c87;
-        --lavender-dark: #3b0764;
-    }
-
-    .export-page {
-        min-height: 100vh;
-        background: linear-gradient(135deg, var(--lavender-50) 0%, #f0e7ff 50%, var(--lavender-100) 100%);
-        padding: 2rem;
-    }
-
-    .export-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-        padding: 1.5rem 2rem;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(169, 112, 255, 0.1);
-        border: 1px solid var(--lavender-200);
-    }
-
-    .header-left {
-        flex: 1;
-    }
-
-    .page-title {
-        font-size: 2rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, var(--lavender-700) 0%, var(--lavender-500) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin: 0;
-        margin-bottom: 0.5rem;
-    }
-
-    .page-subtitle {
-        color: var(--lavender-600);
-        font-size: 1rem;
-        margin: 0;
-        opacity: 0.8;
-    }
-
-    .btn-back {
-        background: linear-gradient(135deg, var(--lavender-600) 0%, var(--lavender-500) 100%) !important;
-        color: white !important;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(169, 112, 255, 0.3);
-    }
-
-        .btn-back:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(169, 112, 255, 0.4);
-        }
-
     .export-container {
         max-width: 1200px;
-        margin: 0 auto;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
     }
 
-    .export-card {
-        background: white;
-        border-radius: 20px;
-        box-shadow: 0 8px 32px rgba(169, 112, 255, 0.12);
-        border: 1px solid var(--lavender-200);
-        overflow: hidden;
+    .export-header-section {
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--mud-palette-divider);
+        padding-bottom: 1rem;
     }
 
-        .export-card .mud-card-header {
-            background: linear-gradient(135deg, var(--lavender-100) 0%, var(--lavender-50) 100%);
-            border-bottom: 2px solid var(--lavender-300);
-            padding: 1.5rem;
-        }
-
-        .export-card .mud-card-content {
-            padding: 2rem;
-        }
-
-    .form-section {
-        margin-bottom: 2.5rem;
-        padding-bottom: 2rem;
-        border-bottom: 2px solid var(--lavender-100);
-    }
-
-        .form-section:last-child {
-            border-bottom: none;
-        }
-
-    .date-range-picker {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .date-input-group {
-        position: relative;
-    }
-
-    /* Quick Presets Styling */
-    .quick-presets {
-        background: var(--lavender-50);
-        padding: 1.5rem;
+    .settings-card {
         border-radius: 12px;
-        border: 1px solid var(--lavender-200);
-        margin-top: 1rem;
+        border: 1px solid var(--mud-palette-divider);
     }
 
-    .preset-label {
-        color: var(--lavender-700);
+    .form-group-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         font-weight: 600;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        margin-bottom: 1rem;
+        color: var(--mud-palette-text-primary);
     }
 
-    .preset-buttons {
+    .preset-container {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.75rem;
+        gap: 8px;
+        margin-top: 12px;
     }
 
-    .preset-btn {
-        background: white !important;
-        color: var(--lavender-700) !important;
-        border: 2px solid var(--lavender-300) !important;
-        border-radius: 8px !important;
-        padding: 0.5rem 1rem !important;
-        transition: all 0.3s ease !important;
-        font-weight: 500 !important;
-    }
-
-        .preset-btn:hover {
-            background: var(--lavender-500) !important;
-            color: white !important;
-            border-color: var(--lavender-500) !important;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(169, 112, 255, 0.3);
-        }
-
-    /* Filter Actions */
-    .filter-actions {
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-        margin-top: 1.5rem;
-        padding: 1.5rem;
-        background: linear-gradient(135deg, var(--lavender-100) 0%, var(--lavender-50) 100%);
-        border-radius: 12px;
-        border: 1px solid var(--lavender-200);
-    }
-
-    .btn-filter {
-        background: linear-gradient(135deg, var(--lavender-700) 0%, var(--lavender-600) 100%) !important;
-        color: white !important;
-        border: none !important;
-        padding: 0.75rem 1.5rem !important;
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
-    }
-
-        .btn-filter:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
-        }
-
-    .filter-summary {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: var(--lavender-700);
-        font-size: 0.95rem;
-    }
-
-    /* Export Options */
-    .export-options {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        padding: 1.5rem;
-        background: var(--lavender-50);
-        border-radius: 12px;
-        border: 1px solid var(--lavender-200);
-        margin-bottom: 1.5rem;
-    }
-
-    /* Preview Section */
-    .preview-section {
-        background: linear-gradient(135deg, var(--lavender-50) 0%, white 100%);
-        padding: 2rem;
-        border-radius: 16px;
-        border: 2px solid var(--lavender-200);
-        margin-top: 2rem;
-    }
-
-    .preview-stats {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-        margin-top: 1.5rem;
-    }
-
-    .stat-card {
-        background: white;
-        border-radius: 12px;
-        border: 2px solid var(--lavender-200);
-        transition: all 0.3s ease;
-    }
-
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(169, 112, 255, 0.2);
-            border-color: var(--lavender-400);
-        }
-
-    .stat-icon {
-        width: 64px;
-        height: 64px;
-        margin: 0 auto;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, var(--lavender-100) 0%, var(--lavender-200) 100%);
-        border-radius: 50%;
-    }
-
-    .preview-info {
-        background: linear-gradient(135deg, var(--lavender-100) 0%, var(--lavender-50) 100%) !important;
-        border: 2px solid var(--lavender-300) !important;
-        border-radius: 12px !important;
-        color: var(--lavender-800) !important;
-    }
-
-    .preview-section.loading,
-    .preview-section.empty {
-        background: white;
-        border: 2px dashed var(--lavender-300);
-    }
-
-    /* Action Buttons */
-    .action-buttons {
-        display: flex;
-        gap: 1rem;
-        margin-top: 2rem;
-        padding-top: 2rem;
-        border-top: 2px solid var(--lavender-100);
-    }
-
-        .action-buttons .mud-button-filled {
-            background: linear-gradient(135deg, var(--lavender-600) 0%, var(--lavender-500) 100%) !important;
-            color: white !important;
-            padding: 0.875rem 2rem !important;
-            border-radius: 12px !important;
-            font-weight: 600 !important;
-            font-size: 1rem !important;
-            transition: all 0.3s ease !important;
-            box-shadow: 0 4px 16px rgba(169, 112, 255, 0.3);
-        }
-
-            .action-buttons .mud-button-filled:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 24px rgba(169, 112, 255, 0.4);
-            }
-
-        .action-buttons .mud-button-outlined {
-            border: 2px solid var(--lavender-400) !important;
-            color: var(--lavender-700) !important;
-            padding: 0.875rem 2rem !important;
-            border-radius: 12px !important;
-            font-weight: 600 !important;
-            transition: all 0.3s ease !important;
-        }
-
-            .action-buttons .mud-button-outlined:hover {
-                background: var(--lavender-50) !important;
-                border-color: var(--lavender-600) !important;
-                transform: translateY(-2px);
-            }
-
-    /* Recent Exports */
-    .exports-history {
-        margin-top: 2rem;
-    }
-
-        .exports-history .mud-card {
-            background: white;
-            border-radius: 16px;
-            border: 1px solid var(--lavender-200);
-            box-shadow: 0 4px 20px rgba(169, 112, 255, 0.1);
-        }
-
-        .exports-history .mud-card-header {
-            background: linear-gradient(135deg, var(--lavender-100) 0%, var(--lavender-50) 100%);
-            border-bottom: 2px solid var(--lavender-200);
-        }
-
-    .export-item {
-        background: var(--lavender-50) !important;
-        border: 1px solid var(--lavender-200) !important;
-        border-radius: 12px !important;
-        transition: all 0.3s ease;
-    }
-
-        .export-item:hover {
-            background: white !important;
-            border-color: var(--lavender-400) !important;
-            transform: translateX(4px);
-            box-shadow: 0 4px 16px rgba(169, 112, 255, 0.15);
-        }
-
-    /* Alert Styling */
-    .mud-alert-error {
-        background: #fff1f2 !important;
-        border-left: 4px solid #ef4444 !important;
-        color: #991b1b !important;
-    }
-
-    .mud-alert-success {
-        background: linear-gradient(135deg, var(--lavender-50) 0%, #f0fdf4 100%) !important;
-        border-left: 4px solid var(--lavender-500) !important;
-        color: var(--lavender-800) !important;
-    }
-
-    .mud-alert-info {
-        background: var(--lavender-50) !important;
-        border-left: 4px solid var(--lavender-500) !important;
-        color: var(--lavender-800) !important;
-    }
-
-    /* Loading Dialog */
-    .mud-dialog-content {
-        padding: 2rem !important;
-    }
-
-    .mud-circular-progress {
-        color: var(--lavender-500) !important;
-    }
-
-    .mud-progress-linear {
-        background: var(--lavender-100) !important;
-    }
-
-        .mud-progress-linear .mud-progress-linear-bar {
-            background: linear-gradient(90deg, var(--lavender-500) 0%, var(--lavender-400) 100%) !important;
-        }
-
-    /* MudBlazor Component Overrides */
-    .mud-input-outlined {
-        border-color: var(--lavender-300) !important;
-    }
-
-        .mud-input-outlined:hover {
-            border-color: var(--lavender-400) !important;
-        }
-
-        .mud-input-outlined.mud-input-adorned-end .mud-input-root {
-            border-radius: 10px !important;
-        }
-
-    .mud-checkbox.mud-primary .mud-button-root {
-        color: var(--lavender-600) !important;
-    }
-
-    .mud-checkbox.mud-primary.mud-checked .mud-button-root {
-        color: var(--lavender-600) !important;
-    }
-
-    /* Responsive Design */
-    @@media (max-width: 768px) {
-        .export-page
-
-    {
+    .stat-mini-card {
+        background-color: var(--mud-palette-background-grey);
+        border-radius: 8px;
         padding: 1rem;
-    }
-
-    .export-header {
-        flex-direction: column;
-        gap: 1rem;
         text-align: center;
+        height: 100%;
+        transition: transform 0.2s;
     }
 
-    .page-title {
-        font-size: 1.5rem;
+    .stat-mini-card:hover {
+        transform: translateY(-2px);
     }
 
-    .date-range-picker {
-        grid-template-columns: 1fr;
+    .history-item {
+        border-left: 4px solid var(--mud-palette-primary);
+        transition: background-color 0.2s;
     }
 
-    .preset-buttons {
-        flex-direction: column;
+    .history-item:hover {
+        background-color: var(--mud-palette-action-default-hover);
     }
-
-    .preview-stats {
-        grid-template-columns: 1fr;
-    }
-
-    .action-buttons {
-        flex-direction: column;
-    }
-
-    .filter-actions {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    }
-
-    /* Animation for smooth transitions */
-    @@keyframes fadeIn {
-        from
-
-    {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    }
-
-    .export-card,
-    .stat-card,
-    .export-item {
-        animation: fadeIn 0.4s ease-out;
-    }
-
-    /* Scrollbar Styling */
-    ::-webkit-scrollbar {
-        width: 10px;
-    }
-
-    ::-webkit-scrollbar-track {
-        background: var(--lavender-50);
-    }
-
-    ::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, var(--lavender-400) 0%, var(--lavender-500) 100%);
-        border-radius: 5px;
-    }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, var(--lavender-500) 0%, var(--lavender-600) 100%);
-        }
 </style>
 
-<div class="export-page">
-    <div class="export-header">
-        <div class="header-left">
-            <h1 class="page-title">Export Journals</h1>
-            <p class="page-subtitle">Export multiple entries as PDF by date range</p>
+<div class="export-container">
+    <div class="export-header-section d-flex justify-space-between align-center">
+        <div>
+            <MudText Typo="Typo.h4" Color="Color.Primary" Style="font-weight: 800;">Export Journals</MudText>
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">Download your memories as a high-quality PDF document.</MudText>
         </div>
-        <div class="header-right">
-            <MudButton 
-                Href="/my-journals" 
-                Variant="Variant.Filled" 
-                Color="Color.Default"
-                StartIcon="@Icons.Material.Filled.ArrowBack"
-                Class="btn-back">
-                Back to Journals
-            </MudButton>
-        </div>
+        <MudButton Variant="Variant.Outlined" 
+                   StartIcon="@Icons.Material.Filled.ArrowBack" 
+                   Href="/my-journals"
+                   Color="Color.Default">
+            Back to Journals
+        </MudButton>
     </div>
 
-    <div class="export-container">
-        <!-- Export Settings Card -->
-        <MudCard Class="export-card">
-            <MudCardHeader>
-                <CardHeaderContent>
-                    <MudText Typo="Typo.h6" Class="d-flex align-center">
-                        <MudIcon Icon="@Icons.Material.Filled.PictureAsPdf" Color="Color.Error" Class="mr-2" />
-                        Export Settings
-                    </MudText>
-                </CardHeaderContent>
-            </MudCardHeader>
-            <MudCardContent>
-                <!-- Date Range Selection -->
-                <div class="form-section">
-                    <MudText Typo="Typo.subtitle1" Class="mb-3 d-flex align-center">
-                        <MudIcon Icon="@Icons.Material.Filled.DateRange" Class="mr-2" />
-                        Select Date Range
-                    </MudText>
+    <MudGrid>
+        <MudItem xs="12" lg="8">
+            @* Changed Lg to lg *@
+            <MudCard Elevation="0" Class="settings-card pa-4">
+                <MudCardContent>
 
-                    <div class="date-range-picker">
-                        <div class="date-input-group">
-                            <MudDatePicker T="DateTime?"
-                                           Label="From Date"
-                                           @bind-Date="ExportRequest.StartDate"
-                                           DateFormat="yyyy-MM-dd"
-                                           Variant="Variant.Outlined"
-                                           PickerVariant="PickerVariant.Dialog"
-                                           Class="w-100" />
+                    <div class="mb-8">
+                        <div class="form-group-label">
+                            <MudIcon Icon="@Icons.Material.Filled.DateRange" Color="Color.Primary" />
+                            <MudText Typo="Typo.h6">Step 1: Select Date Range</MudText>
                         </div>
-
-                        <div class="date-input-group">
-                            <MudDatePicker T="DateTime?"
-                                           Label="To Date"
-                                           @bind-Date="ExportRequest.EndDate"
-                                           DateFormat="yyyy-MM-dd"
-                                           Variant="Variant.Outlined"
-                                           PickerVariant="PickerVariant.Dialog"
-                                           Class="w-100" />
+                        <MudGrid>
+                            <MudItem xs="12" sm="6">
+                                <MudDatePicker Label="From Date"
+                                               @bind-Date="ExportRequest.StartDate"
+                                               Variant="Variant.Outlined"
+                                               Margin="Margin.Dense"
+                                               Color="Color.Primary" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudDatePicker Label="To Date"
+                                               @bind-Date="ExportRequest.EndDate"
+                                               Variant="Variant.Outlined"
+                                               Margin="Margin.Dense"
+                                               Color="Color.Primary" />
+                            </MudItem>
+                        </MudGrid>
+                        <div class="preset-container">
+                            <MudChip T="string" OnClick="@(() => SetDateRange(7))" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small">Last 7 Days</MudChip>
+                            <MudChip T="string" OnClick="@(() => SetDateRange(30))" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small">Last 30 Days</MudChip>
+                            <MudChip T="string" OnClick="@(() => SetDateRange(365))" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small">Last Year</MudChip>
+                            <MudChip T="string" OnClick="@(() => SetDateRange(0))" Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small">All Time</MudChip>
                         </div>
-                    </div>
-                    <style>
-                        .preset-btn{
-/*                             background-color:green !important;
- */                        }
-                        </style>
-                    <!-- Quick Date Presets -->
-                    <div class="quick-presets">
-                        <MudText Class="preset-label mb-2">Quick presets:</MudText>
-                        <div class="preset-buttons" >
-                            <MudButton 
-                                Variant="Variant.Outlined" 
-                                Color="Color.Default"
-                                Size="Size.Small"
-                                OnClick="() => SetDateRange(7)"               
-                                Class="preset-btn bg-dark">
-                                Last 7 Days
-                            </MudButton>
-                            <MudButton 
-                                Variant="Variant.Outlined" 
-                                Color="Color.Default"
-                                Size="Size.Small"
-                                OnClick="() => SetDateRange(30)"
-                                Class="preset-btn">
-                                Last 30 Days
-                            </MudButton>
-                            <MudButton 
-                                Variant="Variant.Outlined" 
-                                Color="Color.Default"
-                                Size="Size.Small"
-                                OnClick="() => SetDateRange(90)"
-                                Class="preset-btn">
-                                Last 3 Months
-                            </MudButton>
-                            <MudButton 
-                                Variant="Variant.Outlined" 
-                                Color="Color.Default"
-                                Size="Size.Small"
-                                OnClick="() => SetDateRange(365)"
-                                Class="preset-btn">
-                                Last Year
-                            </MudButton>
-                            <MudButton 
-                                Variant="Variant.Outlined" 
-                                Color="Color.Default"
-                                Size="Size.Small"
-                                OnClick="() => SetDateRange(0)"
-                                Class="preset-btn">
-                                All Time
-                            </MudButton>
-                        </div>
-                    </div>
-
-                    <!-- Apply Filter Button -->
-                    <div class="filter-actions " style="background-color:green; z-index:1000;">
-                        <MudButton 
-                            Variant="Variant.Filled" 
-                            Color="Color.Dark"
-                            OnClick="ApplyFilter"
-                            StartIcon="@Icons.Material.Filled.FilterAlt"
-                            Class="btn-filter bg-black">
-                            Apply Filter
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Dark"
+                                   StartIcon="@Icons.Material.Filled.FilterList"
+                                   OnClick="ApplyFilter"
+                                   Class="mt-4"
+                                   Size="Size.Small">
+                            Apply Filter & Scan Entries
                         </MudButton>
-                        
-                        @if (HasEntries && !IsLoadingStatistics)
-                        {
-                            <div class="filter-summary">
-                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Class="mr-1" />
-                                <MudText Typo="Typo.body2">
-                                    Showing @EntryCount entries from @ExportRequest.StartDate?.ToString("MMM dd, yyyy") to @ExportRequest.EndDate?.ToString("MMM dd, yyyy")
-                                </MudText>
-                            </div>
-                        }
                     </div>
-                </div>
 
-                <!-- Export Options -->
-                <div class="form-section">
-                    <MudText Typo="Typo.subtitle1" Class="mb-3 d-flex align-center">
-                        <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />
-                        Export Options
-                    </MudText>
-                    <div class="export-options">
-                        <MudCheckBox T="bool"
-                                     @bind-Checked="ExportRequest.IncludeMoods"
-                                     Color="Color.Primary"
-                                     Label="Include Mood Information" />
+                    <MudDivider Class="my-6" />
 
-                        <MudCheckBox T="bool"
-                                     @bind-Checked="ExportRequest.IncludeStats"
-                                     Color="Color.Primary"
-                                     Label="Include Statistics Summary" />
-
-                        <MudCheckBox T="bool"
-                                     @bind-Checked="ExportRequest.IncludeTags"
-                                     Color="Color.Primary"
-                                     Label="Include Tags" />
-                    </div>
-                
-
-                    <!-- Document Title -->
-                    <MudItem Class="mt-4">
-                        <MudTextField 
-                            @bind-Value="ExportRequest.Title"
-                            Label="Document Title"
-                            Placeholder="My Journal Entries"
-                            Variant="Variant.Outlined"
-                            Class="w-100" />
-                    </MudItem>
-
-                    <MudItem Class="mt-3">
-                        <MudTextField 
-                            @bind-Value="ExportRequest.Subtitle"
-                            Label="Document Subtitle"
-                            Placeholder="Personal reflections and memories"
-                            Variant="Variant.Outlined"
-                            Class="w-100" />
-                    </MudItem>
-                </div>
-
-                <!-- Preview Section -->
-                @if (HasEntries)
-                {
-                    <div class="preview-section">
-                        <MudText Typo="Typo.subtitle1" Class="mb-3 d-flex align-center">
-                            <MudIcon Icon="@Icons.Material.Filled.RemoveRedEye" Class="mr-2" />
-                            Export Preview
-                        </MudText>
-
-                        <div class="preview-stats">
-                            <MudCard Class="stat-card">
-                                <MudCardContent>
-                                    <div class="text-center">
-                                        <div class="stat-icon">
-                                            <MudIcon Icon="@Icons.Material.Filled.Book" Size="Size.Large" Color="Color.Primary" />
-                                        </div>
-                                        <MudText Typo="Typo.h4" Class="mt-2">@EntryCount</MudText>
-                                        <MudText Typo="Typo.body2" Color="Color.Default">Entries to Export</MudText>
-                                    </div>
-                                </MudCardContent>
-                            </MudCard>
-
-                            <MudCard Class="stat-card">
-                                <MudCardContent>
-                                    <div class="text-center">
-                                        <div class="stat-icon">
-                                            <MudIcon Icon="@Icons.Material.Filled.Title" Size="Size.Large" Color="Color.Primary" />
-                                        </div>
-                                        <MudText Typo="Typo.h4" Class="mt-2">@TotalWords</MudText>
-                                        <MudText Typo="Typo.body2" Color="Color.Default">Total Words</MudText>
-                                    </div>
-                                </MudCardContent>
-                            </MudCard>
-
-                            <MudCard Class="stat-card">
-                                <MudCardContent>
-                                    <div class="text-center">
-                                        <div class="stat-icon">
-                                            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Color="Color.Primary" />
-                                        </div>
-                                        <MudText Typo="Typo.h6" Class="mt-2">@ExportRequest.StartDate?.ToString("MMM dd, yyyy")</MudText>
-                                        <MudText Typo="Typo.body2" Color="Color.Default">Start Date</MudText>
-                                    </div>
-                                </MudCardContent>
-                            </MudCard>
-
-                            <MudCard Class="stat-card">
-                                <MudCardContent>
-                                    <div class="text-center">
-                                        <div class="stat-icon">
-                                            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Color="Color.Primary" />
-                                        </div>
-                                        <MudText Typo="Typo.h6" Class="mt-2">@ExportRequest.EndDate?.ToString("MMM dd, yyyy")</MudText>
-                                        <MudText Typo="Typo.body2" Color="Color.Default">End Date</MudText>
-                                    </div>
-                                </MudCardContent>
-                            </MudCard>
+                    <div class="mb-8">
+                        <div class="form-group-label">
+                            <MudIcon Icon="@Icons.Material.Filled.Tune" Color="Color.Primary" />
+                            <MudText Typo="Typo.h6">Step 2: Document Customization</MudText>
                         </div>
+                        <MudTextField @bind-Value="ExportRequest.Title"
+                                      Label="Main Document Title"
+                                      Placeholder="e.g., My 2024 Reflections"
+                                      Variant="Variant.Outlined"
+                                      Class="mb-4" />
 
-                        <MudAlert Severity="Severity.Info" Class="preview-info mt-3">
-                            <MudText>
-                                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
-                                Estimated PDF size: <strong>@GetEstimatedFileSize()</strong>
-                            </MudText>
-                            <MudText Class="mt-1">
-                                Export will include all @EntryCount entries from the selected date range.
-                            </MudText>
-                        </MudAlert>
+                        <div class="d-flex flex-wrap gap-4">
+                            <MudSwitch @bind-Value="ExportRequest.IncludeMoods" Label="Include Mood Data" Color="Color.Primary" />
+                            <MudSwitch @bind-Value="ExportRequest.IncludeStats" Label="Include Analysis Summary" Color="Color.Primary" />
+                            <MudSwitch @bind-Value="ExportRequest.IncludeTags" Label="Include Entry Tags" Color="Color.Primary" />
+                        </div>
                     </div>
-                }
-                else if (IsLoadingStatistics)
-                {
-                    <div class="preview-section loading text-center py-6">
-                        <MudCircularProgress Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-                        <MudText Typo="Typo.body1" Class="mt-3">Loading preview...</MudText>
-                    </div>
-                }
-                else if (!HasEntries && !IsLoadingStatistics && FilterApplied)
-                {
-                    <div class="preview-section empty text-center py-6">
-                        <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Default" Class="mb-3" />
-                        <MudText Typo="Typo.h6" Class="mb-2">No Entries Found</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Default">
-                            No journal entries found for the selected date range.
-                        </MudText>
-                    </div>
-                }
 
-                <!-- Action Buttons -->
-                <div class="action-buttons">
-                    <MudButton 
-                        Variant="Variant.Outlined" 
-                        Color="Color.Secondary"
-                        OnClick="PreviewExport"
-                        StartIcon="@Icons.Material.Filled.RemoveRedEye"
-                        Class="mr-2">
-                        Preview
-                    </MudButton>
-
-                    <MudButton 
-                        Variant="Variant.Filled" 
-                        Color="Color.Primary"
-                        OnClick="GenerateExport"
-                        StartIcon="@Icons.Material.Filled.Download"
-                        Loading="@IsExporting">
-                        @if (IsExporting)
-                        {
-                            <span>Exporting...</span>
-                        }
-                        else
-                        {
-                            <span>Export as PDF</span>
-                        }
-                    </MudButton>
-                </div>
-
-                @if (!string.IsNullOrEmpty(ErrorMessage))
-                {
-                    <MudAlert Severity="Severity.Error" Class="mt-3">
-                        @ErrorMessage
-                    </MudAlert>
-                }
-
-                @if (!string.IsNullOrEmpty(SuccessMessage))
-                {
-                    <MudAlert Severity="Severity.Success" Class="mt-3">
-                        @SuccessMessage
-                    </MudAlert>
-                }
-            </MudCardContent>
-        </MudCard>
-
-        <!-- Recent Exports (if any) -->
-        @if (RecentExports.Any())
-        {
-            <div class="exports-history mt-4">
-                <MudCard>
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <MudText Typo="Typo.h6" Class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.History" Class="mr-2" />
-                                Recent Exports
-                            </MudText>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent>
-                        @foreach (var export in RecentExports.Take(5))
-                        {
-                            <MudCard Class="export-item mb-2">
-                                <MudCardContent>
-                                    <div class="d-flex justify-space-between align-center">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.PictureAsPdf" Color="Color.Error" Class="mr-3" />
-                                            <div>
-                                                <MudText Typo="Typo.subtitle2">@export.FileName</MudText>
-                                                <MudText Typo="Typo.caption" Color="Color.Default">
-                                                    @export.EntryCount entries • @export.ExportDate.ToString("MMM dd, yyyy HH:mm")
-                                                </MudText>
-                                            </div>
-                                        </div>
-                                        <MudButton 
-                                            Variant="Variant.Outlined" 
-                                            Color="Color.Primary"
-                                            Size="Size.Small"
-                                            OnClick="() => DownloadExport(export)"
-                                            StartIcon="@Icons.Material.Filled.Download">
-                                            Download
-                                        </MudButton>
+                    @if (HasEntries)
+                    {
+                        <div class="mb-4">
+                            <div class="form-group-label">
+                                <MudIcon Icon="@Icons.Material.Filled.Summarize" Color="Color.Primary" />
+                                <MudText Typo="Typo.h6">Export Summary</MudText>
+                            </div>
+                            <MudGrid>
+                                <MudItem xs="4">
+                                    <div class="stat-mini-card">
+                                        <MudText Typo="Typo.h5">@EntryCount</MudText>
+                                        <MudText Typo="Typo.caption">Entries Found</MudText>
                                     </div>
-                                </MudCardContent>
-                            </MudCard>
-                        }
-                    </MudCardContent>
-                </MudCard>
-            </div>
-        }
-    </div>
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <div class="stat-mini-card">
+                                        <MudText Typo="Typo.h5">@TotalWords</MudText>
+                                        <MudText Typo="Typo.caption">Total Words</MudText>
+                                    </div>
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <div class="stat-mini-card">
+                                        <MudText Typo="Typo.h5">~@GetEstimatedFileSize()</MudText>
+                                        <MudText Typo="Typo.caption">Est. File Size</MudText>
+                                    </div>
+                                </MudItem>
+                            </MudGrid>
+                        </div>
+                    }
+                    else if (FilterApplied && !IsLoadingStatistics)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-4">
+                            No journal entries were found for the selected dates.
+                        </MudAlert>
+                    }
+                </MudCardContent>
+                <MudCardActions Class="pa-4 d-flex justify-end border-top">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.Download"
+                               OnClick="GenerateExport"
+                               Disabled="@(!HasEntries || IsExporting)"
+                               Style="min-width: 200px;">
+                        @((IsExporting) ? "Generating..." : "Export as PDF")
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" lg="4">
+            @* Changed Lg to lg *@
+            <MudText Typo="Typo.h6" Class="mb-4">Recent Activity</MudText>
+            @if (!RecentExports.Any())
+            {
+                <MudPaper Class="pa-8 d-flex flex-column align-center justify-center" Elevation="0" Style="border: 1px dashed var(--mud-palette-divider);">
+                    <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large" Color="Color.Default" />
+                    <MudText Color="Color.Secondary" Class="mt-2">No recent exports</MudText>
+                </MudPaper>
+            }
+            else
+            {
+                @foreach (var export in RecentExports)
+                {
+                    <MudPaper Class="history-item pa-3 mb-3 d-flex align-center justify-space-between" Elevation="1">
+                        <div style="max-width: 70%;">
+                            <MudText Typo="Typo.body2" Class="text-truncate" Style="font-weight: 600;">@export.FileName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @export.EntryCount entries • @export.ExportDate.ToString("MMM dd")
+                            </MudText>
+                        </div>
+                        <MudIconButton Icon="@Icons.Material.Filled.FileDownload"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       OnClick="() => DownloadExport(export)" />
+                    </MudPaper>
+                }
+            }
+        </MudItem>
+    </MudGrid>
 </div>
-<!-- Loading Modal -->
-@if (IsExporting)
-{
-    <MudDialog @bind-IsVisible="IsExporting" Options="dialogOptions">
-        <DialogContent>
-            <div class="text-center">
-                <MudCircularProgress Color="Color.Primary" Size="Size.Large" Indeterminate="true" Class="mb-3" />
-                <MudText Typo="Typo.h6">Generating PDF Export</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Default" Class="mt-2">
-                    Processing @EntryCount entries...
-                </MudText>
-                <MudProgressLinear 
-                    Color="Color.Primary" 
-                    Value="@ExportProgress" 
-                    Class="mt-3" />
-                <MudText Typo="Typo.caption" Color="Color.Default" Class="mt-2">
-                    This may take a moment depending on the number of entries.
-                </MudText>
+
+<MudDialog @bind-IsVisible="IsExporting" Options="_dialogOptions">
+    <DialogContent>
+        <div class="d-flex flex-column align-center py-6">
+            <MudCircularProgress Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Class="mt-4">Compiling Your Journal</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Please don't close this window...</MudText>
+            <div style="width: 100%;" class="mt-4">
+                <MudProgressLinear Color="Color.Primary" Value="@ExportProgress" />
             </div>
-        </DialogContent>
-    </MudDialog>
-}
+        </div>
+    </DialogContent>
+</MudDialog>
 
 @code {
     private ExportRequest ExportRequest = new();
@@ -861,126 +245,56 @@
     private bool IsExporting = false;
     private bool IsLoadingStatistics = false;
     private bool FilterApplied = false;
-    private string ErrorMessage = string.Empty;
-    private string SuccessMessage = string.Empty;
     private int ExportProgress = 0;
     private Timer? ProgressTimer;
-    private DialogOptions dialogOptions = new()
-    {
-        CloseOnEscapeKey = false // keep this if needed
-    };
+    private string ErrorMessage = "";
+    private string SuccessMessage = "";
 
-
-    // Simplified statistics
     private int EntryCount = 0;
     private int TotalWords = 0;
     private bool HasEntries => EntryCount > 0;
-    
-    // Current user ID (get from authentication)
     private int CurrentUserId = 1;
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        CloseOnEscapeKey = false,
+        BackdropClick = false, // This replaces DisableBackdropClick
+        MaxWidth = MaxWidth.ExtraSmall,
+        FullWidth = true
+    };
 
     protected override async Task OnInitializedAsync()
     {
-        // Initialize with default date range (last 30 days)
         ExportRequest.UserId = CurrentUserId;
         ExportRequest.StartDate = DateTime.Today.AddDays(-30);
         ExportRequest.EndDate = DateTime.Today;
         ExportRequest.IncludeStats = true;
+        ExportRequest.Title = "My Journal Entries";
 
-        // Don't auto-load statistics anymore - wait for user to apply filter
-        // await LoadStatistics();
-
-        // Load recent exports from local storage
         await LoadRecentExports();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // Initialize JavaScript interop if needed
-            await JS.InvokeVoidAsync("console.log", "Export page loaded");
-        }
-    }
-
-    private async Task LoadStatistics()
-    {
-        IsLoadingStatistics = true;
-        ErrorMessage = string.Empty;
-        FilterApplied = true;
-        StateHasChanged();
-
-        try
-        {
-            // Validate dates
-            if (ExportRequest.StartDate > ExportRequest.EndDate)
-            {
-                ErrorMessage = "Start date cannot be later than end date.";
-                EntryCount = 0;
-                TotalWords = 0;
-                Snackbar.Add(ErrorMessage, Severity.Error);
-                return;
-            }
-
-            // Update the request with current user ID
-            ExportRequest.UserId = CurrentUserId;
-
-            // Create a preview request to get statistics
-            var previewRequest = new ExportRequest
-            {
-                UserId = ExportRequest.UserId,
-                StartDate = ExportRequest.StartDate,
-                EndDate = ExportRequest.EndDate
-            };
-
-            // Call ExportService to validate and get entry count
-            var result = await ExportService.ExportEntriesAsync(previewRequest);
-
-            if (!result.Success)
-            {
-                ErrorMessage = result.ErrorMessage;
-                EntryCount = 0;
-                TotalWords = 0;
-                Snackbar.Add(ErrorMessage, Severity.Error);
-            }
-            else
-            {
-                EntryCount = result.EntryCount;
-                
-                if (EntryCount > 0)
-                {
-                    SuccessMessage = $"Found {EntryCount} entries for the selected date range.";
-                    Snackbar.Add(SuccessMessage, Severity.Success);
-                    
-                    // Log to console for debugging
-                    await JS.InvokeVoidAsync("console.log",
-                        $"Filter applied: {EntryCount} entries from {ExportRequest.StartDate?.ToShortDateString()} to {ExportRequest.EndDate?.ToShortDateString()}");
-                }
-                else
-                {
-                    Snackbar.Add("No entries found for the selected date range.", Severity.Info);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Error loading statistics: {ex.Message}";
-            EntryCount = 0;
-            TotalWords = 0;
-            Snackbar.Add(ErrorMessage, Severity.Error);
-            await JS.InvokeVoidAsync("console.error", $"Error: {ex.Message}");
-        }
-        finally
-        {
-            IsLoadingStatistics = false;
-            StateHasChanged();
-        }
     }
 
     private async Task ApplyFilter()
     {
-        ExportRequest.UserId = CurrentUserId;
-        await LoadStatistics();
+        IsLoadingStatistics = true;
+        FilterApplied = true;
+        
+        try 
+        {
+            var result = await ExportService.ExportEntriesAsync(ExportRequest);
+            if (result.Success)
+            {
+                EntryCount = result.EntryCount;
+                TotalWords = EntryCount * 120; // Mock calculation
+            }
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Failed to fetch entries.", Severity.Error);
+        }
+        finally
+        {
+            IsLoadingStatistics = false;
+        }
     }
 
     private async Task SetDateRange(int days)
@@ -992,177 +306,49 @@
         }
         else
         {
-            // "All Time" - set to a far back date
             ExportRequest.StartDate = new DateTime(2020, 1, 1);
             ExportRequest.EndDate = DateTime.Today;
         }
-
-        ExportRequest.UserId = CurrentUserId;
-
-        // Log to console
-        await JS.InvokeVoidAsync("console.log",
-            $"Date range set: {ExportRequest.StartDate?.ToShortDateString()} to {ExportRequest.EndDate?.ToShortDateString()} (days: {days})");
-
-        // Automatically apply filter when using quick presets
-        await LoadStatistics();
+        await ApplyFilter();
     }
 
     private async Task GenerateExport()
     {
-        if (!HasEntries)
-        {
-            ErrorMessage = "No entries found to export. Please apply a filter first.";
-            Snackbar.Add(ErrorMessage, Severity.Error);
-            return;
-        }
-
-        // If filter hasn't been applied, apply it first
-        if (!FilterApplied)
-        {
-            await ApplyFilter();
-            if (!HasEntries)
-            {
-                ErrorMessage = "No entries found to export after applying filter.";
-                Snackbar.Add(ErrorMessage, Severity.Error);
-                return;
-            }
-        }
-
         IsExporting = true;
-        ErrorMessage = string.Empty;
-        SuccessMessage = string.Empty;
         StartProgressTimer();
 
         try
         {
-            // Ensure user ID is set
-            ExportRequest.UserId = CurrentUserId;
-
-            // Log to console
-            await JS.InvokeVoidAsync("console.log",
-                $"Starting export for {EntryCount} entries from {ExportRequest.StartDate?.ToShortDateString()} to {ExportRequest.EndDate?.ToShortDateString()}");
-
-            // Generate export with all settings
             var result = await ExportService.ExportEntriesAsync(ExportRequest);
-
             if (result.Success)
             {
-                // Download the file
-                await DownloadFile(result.FileName, result.Content, result.ContentType);
-
-                // Save to recent exports
-                await SaveToRecentExports(result);
-
-                SuccessMessage = $"Successfully exported {result.EntryCount} entries as PDF!";
-                Snackbar.Add(SuccessMessage, Severity.Success);
-                await JS.InvokeVoidAsync("console.log", $"Export successful: {result.FileName}");
-            }
-            else
-            {
-                ErrorMessage = result.ErrorMessage;
-                Snackbar.Add(ErrorMessage, Severity.Error);
-                await JS.InvokeVoidAsync("console.error", $"Export failed: {result.ErrorMessage}");
+                var streamRef = new DotNetStreamReference(new MemoryStream(result.Content));
+                await JS.InvokeVoidAsync("downloadFileFromStream", result.FileName, streamRef);
+                
+                RecentExports.Insert(0, result);
+                Snackbar.Add("PDF Generated Successfully!", Severity.Success);
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Error during export: {ex.Message}";
-            Snackbar.Add(ErrorMessage, Severity.Error);
-            await JS.InvokeVoidAsync("console.error", $"Export error: {ex.Message}");
+            Snackbar.Add($"Export failed: {ex.Message}", Severity.Error);
         }
         finally
         {
-            IsExporting = false;
             StopProgressTimer();
-            StateHasChanged();
+            IsExporting = false;
         }
-    }
-
-    private async Task PreviewExport()
-    {
-        // If filter hasn't been applied, apply it first
-        if (!FilterApplied)
-        {
-            await ApplyFilter();
-            if (!HasEntries)
-            {
-                ErrorMessage = "No entries found to preview. Please apply a filter first.";
-                Snackbar.Add(ErrorMessage, Severity.Error);
-                return;
-            }
-        }
-
-        // Preview functionality (could open in new tab or show preview)
-        SuccessMessage = "Preview feature coming soon!";
-        Snackbar.Add(SuccessMessage, Severity.Info);
-        await JS.InvokeVoidAsync("console.log", "Preview button clicked");
-    }
-
-    private async Task DownloadFile(string fileName, byte[] content, string contentType)
-    {
-        var streamRef = new DotNetStreamReference(new MemoryStream(content));
-        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
     }
 
     private async Task DownloadExport(ExportResult export)
     {
-        // For demo purposes, just show a message
-        SuccessMessage = $"Downloading {export.FileName}...";
-        Snackbar.Add(SuccessMessage, Severity.Info);
-        await JS.InvokeVoidAsync("console.log", $"Downloading: {export.FileName}");
-
-        await Task.Delay(1000);
-        Snackbar.Add("Export downloaded successfully!", Severity.Success);
-    }
-
-    private async Task LoadRecentExports()
-    {
-        // Load from local storage or keep in memory
-        RecentExports = new List<ExportResult>
-        {
-            new()
-            {
-                FileName = "Journal-Export-20240101-20240131-15-entries.pdf",
-                EntryCount = 15,
-                ExportDate = DateTime.Now.AddDays(-2)
-            },
-            new()
-            {
-                FileName = "My-Journal-202312-28-entries.pdf",
-                EntryCount = 28,
-                ExportDate = DateTime.Now.AddDays(-7)
-            }
-        };
-
-        await JS.InvokeVoidAsync("console.log", $"Loaded {RecentExports.Count} recent exports");
-        await Task.CompletedTask;
-    }
-
-    private async Task SaveToRecentExports(ExportResult result)
-    {
-        RecentExports.Insert(0, result);
-
-        // Keep only last 10 exports
-        if (RecentExports.Count > 10)
-        {
-            RecentExports = RecentExports.Take(10).ToList();
-        }
-
-        await Task.CompletedTask;
+        Snackbar.Add($"Re-downloading {export.FileName}...", Severity.Info);
+        await Task.Delay(500); 
     }
 
     private string GetEstimatedFileSize()
     {
-        if (!HasEntries) return "0 KB";
-
-        // Rough estimation: ~2KB per entry + overhead
-        var estimatedKB = (EntryCount * 2) + 10;
-
-        if (estimatedKB < 1024)
-            return $"{estimatedKB} KB";
-
-        var estimatedMB = estimatedKB / 1024.0;
-        return $"{estimatedMB:F1} MB";
+        return EntryCount == 0 ? "0 KB" : $"{(EntryCount * 15) + 40} KB";
     }
 
     private void StartProgressTimer()
@@ -1170,24 +356,29 @@
         ExportProgress = 0;
         ProgressTimer = new Timer(_ =>
         {
-            if (ExportProgress < 90)
+            if (ExportProgress < 95)
             {
                 ExportProgress += 5;
                 InvokeAsync(StateHasChanged);
             }
-        }, null, 0, 500);
+        }, null, 0, 400);
     }
 
     private void StopProgressTimer()
     {
         ProgressTimer?.Dispose();
-        ProgressTimer = null;
         ExportProgress = 100;
     }
 
-    public void Dispose()
+    private async Task LoadRecentExports()
     {
-        ProgressTimer?.Dispose();
+        // Mocking history
+        RecentExports = new List<ExportResult> {
+            new() { FileName = "January_Journal.pdf", EntryCount = 12, ExportDate = DateTime.Now.AddDays(-1) },
+            new() { FileName = "Full_History_2023.pdf", EntryCount = 145, ExportDate = DateTime.Now.AddDays(-10) }
+        };
+        await Task.CompletedTask;
     }
-}
 
+    public void Dispose() => ProgressTimer?.Dispose();
+}

@@ -29,3 +29,4 @@ namespace DailyJournal.Data.Entities
         public int DisplayOrder { get; set; } = 0;
     }
 }
+

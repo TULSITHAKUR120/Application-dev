@@ -171,3 +171,4 @@ public class ExportService
         return $"Journal_Export_{request.StartDate:yyyyMMdd}_to_{request.EndDate:yyyyMMdd}_{count}_entries_{DateTime.Now:HHmm}.pdf";
     }
 }
+

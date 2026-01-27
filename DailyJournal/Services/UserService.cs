@@ -1,11 +1,9 @@
-﻿using System;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
-using DailyJournal.Data.Database;
+﻿using DailyJournal.Data.Database;
 using DailyJournal.Data.Entities;
 using DailyJournal.Data.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace DailyJournal.Services
 {
@@ -82,6 +80,33 @@ namespace DailyJournal.Services
                 Username = user.Username
             };
         }
+        public async Task<User?> GetUserByIdAsync(int userId)
+        {
+            return await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == userId);
+        }
+
+
+        public async Task<User?> GetUserByUsernameAsync(string username)
+        {
+            return await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Username == username);
+        }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            return await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Email == email);
+        }
+
+        public async Task UpdateUserAsync(User user)
+        {
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+        }
 
         private string HashText(string text)
         {
@@ -92,3 +117,4 @@ namespace DailyJournal.Services
         }
     }
 }
+

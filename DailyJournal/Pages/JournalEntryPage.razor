@@ -8,120 +8,158 @@
 @using Microsoft.AspNetCore.Components.Web
 @using Markdig
 @using Microsoft.JSInterop
+@using MudBlazor
 @inject JournalService JournalService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject ThemeService ThemeService
+@implements IDisposable
+
+<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="@_currentTheme" />
 
 <style>
-    :root {
-        --lavender-50: #F8F6FF;
-        --lavender-100: #F3E8FF;
-        --lavender-200: #E9D8FF;
-        --lavender-300: #D8B4FE;
-        --lavender-500: #7C3AED;
-        --lavender-600: #6D28D9;
-        --muted-700: #4B5563;
-        --danger-50: #FFF1F2;
-    }
-
-    /* Page */
+    /* Dynamic theme variables */
     .journal-page {
         min-height: 100vh;
-        background: var(--lavender-50);
+        background: var(--mud-palette-background);
         padding: 2rem 1rem;
         font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-        color: #111827;
+        color: var(--mud-palette-text-primary);
+        transition: all 0.3s ease;
     }
 
-    /* Card */
     .journal-card {
         max-width: 980px;
         margin: 0 auto;
-        background: #ffffff;
+        background: var(--mud-palette-surface);
         border-radius: 12px;
-        box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+        box-shadow: var(--mud-elevation-3);
         padding: 1.5rem;
+        border: 1px solid var(--mud-palette-divider);
     }
 
     .journal-header h1 {
         font-weight: 700;
         font-size: 1.75rem;
         margin-bottom: 0.25rem;
+        color: var(--mud-palette-primary);
     }
 
     .journal-header p {
         margin: 0;
-        color: var(--muted-700);
+        color: var(--mud-palette-text-secondary);
     }
 
-    /* Form controls (Bootstrap .form-control base + lavender customizations) */
+    /* Form controls */
     .form-control.custom-input,
     .form-select.custom-input {
-        border: 1px solid #E6E2F8;
+        border: 1px solid var(--mud-palette-lines-inputs);
         border-radius: 8px;
         padding: 0.625rem 0.75rem;
-        transition: box-shadow .15s ease, border-color .15s ease, transform .05s;
-        background: #fff;
-        color: #0F172A;
+        transition: all 0.2s ease;
+        background: var(--mud-palette-surface);
+        color: var(--mud-palette-text-primary);
         box-shadow: none;
     }
 
         .form-control.custom-input:focus,
         .form-select.custom-input:focus {
             outline: none;
-            border-color: var(--lavender-500);
-            box-shadow: 0 6px 18px rgba(124,58,237,0.08), 0 0 0 4px rgba(124,58,237,0.08);
+            border-color: var(--mud-palette-primary);
+            box-shadow: 0 0 0 3px rgba(var(--mud-palette-primary-rgb), 0.1);
         }
 
         .form-control.custom-input:hover,
         .form-select.custom-input:hover {
-            border-color: var(--lavender-200);
+            border-color: var(--mud-palette-primary-lighten);
+        }
+
+    /* Custom select styling - updated for theme */
+    .custom-select {
+        background-color: var(--mud-palette-surface);
+        color: var(--mud-palette-text-primary);
+        border: 1px solid var(--mud-palette-divider);
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        transition: all 0.15s ease;
+        appearance: none;
+    }
+
+        .custom-select option {
+            background: var(--mud-palette-surface);
+            color: var(--mud-palette-text-primary);
+        }
+
+        .custom-select:focus {
+            outline: none;
+            border-color: var(--mud-palette-primary);
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(var(--mud-palette-primary-rgb), 0.25);
+        }
+
+        .custom-select:hover {
+            border-color: var(--mud-palette-primary);
+            transform: scale(1.02);
+            box-shadow: 0 4px 10px rgba(var(--mud-palette-primary-rgb), 0.1);
         }
 
     /* Buttons */
     .btn-lav {
-        background: linear-gradient(180deg, var(--lavender-500), var(--lavender-600));
+        background: var(--mud-palette-primary);
         border: none;
-        color: #fff;
+        color: var(--mud-palette-primary-text);
         padding: 0.6rem 1rem;
         border-radius: 10px;
-        box-shadow: 0 6px 18px rgba(124,58,237,0.12);
-        transition: transform .06s ease, box-shadow .12s ease, opacity .12s ease;
+        box-shadow: var(--mud-elevation-1);
+        transition: all 0.2s ease;
     }
 
         .btn-lav:hover {
+            background: var(--mud-palette-primary-darken);
             transform: translateY(-1px);
-            background: linear-gradient(180deg, var(--lavender-600), #5b21d0);
+            box-shadow: var(--mud-elevation-2);
         }
 
-        .btn-lav:disabled,
-        .btn-lav[disabled] {
-            background: var(--lavender-100);
-            color: rgba(0,0,0,0.35);
-            box-shadow: none;
+        .btn-lav:disabled {
+            opacity: 0.6;
             cursor: not-allowed;
-            opacity: 0.9;
         }
 
     .btn-secondary-muted {
-        background: #F3F4F6;
-        color: #374151;
+        background: var(--mud-palette-background-grey);
+        color: var(--mud-palette-text-secondary);
         border-radius: 10px;
         padding: 0.55rem 0.9rem;
-        border: 1px solid rgba(15,23,42,0.04);
+        border: 1px solid var(--mud-palette-divider);
+        transition: all 0.2s ease;
     }
 
+        .btn-secondary-muted:hover {
+            background: var(--mud-palette-action-default-hover);
+            border-color: var(--mud-palette-primary);
+        }
+
     .btn-danger {
-        background: linear-gradient(180deg, #EF4444, #DC2626);
-        color: #fff;
+        background: var(--mud-palette-error);
+        color: var(--mud-palette-error-text);
         border: none;
         border-radius: 10px;
         padding: 0.55rem 0.9rem;
+        transition: all 0.2s ease;
     }
 
-    /* Editor area (mirror + textarea) */
+        .btn-danger:hover {
+            background: var(--mud-palette-error-darken);
+            transform: translateY(-1px);
+        }
+
+    /* Editor area */
     .editor-wrapper {
         position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--mud-palette-lines-inputs);
     }
 
     .editor-mirror {
@@ -133,29 +171,17 @@
         max-height: 480px;
         overflow: auto;
         pointer-events: none;
-        background: var(--lavender-100);
-        color: #0F172A;
+        background: var(--mud-palette-background);
+        color: var(--mud-palette-text-primary);
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Segoe UI Mono", monospace;
         font-size: 0.95rem;
         line-height: 1.5;
         white-space: pre-wrap;
         word-break: break-word;
-        border: 1px solid rgba(124,58,237,0.08);
     }
 
     .editor-placeholder {
-        color: #6B7280;
-        font-style: italic;
-    }
-
-    .editor-mirror strong,
-    .editor-mirror b {
-        font-weight: 700;
-        color: #111827;
-    }
-
-    .editor-mirror em,
-    .editor-mirror i {
+        color: var(--mud-palette-text-disabled);
         font-style: italic;
     }
 
@@ -163,7 +189,7 @@
         position: relative;
         z-index: 2;
         background: transparent;
-        border: 1px solid transparent;
+        border: none;
         padding: 0.75rem 0.9rem;
         min-height: 220px;
         max-height: 480px;
@@ -173,25 +199,18 @@
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Segoe UI Mono", monospace;
         font-size: 0.95rem;
         line-height: 1.5;
-        color: transparent; /* hide raw markdown visually */
-        caret-color: #111827;
+        color: transparent;
+        caret-color: var(--mud-palette-text-primary);
     }
 
         .editor-textarea:focus {
-            box-shadow: 0 6px 18px rgba(124,58,237,0.06);
+            outline: none;
         }
 
-    .editor-mirror pre {
-        background: rgba(255,255,255,0.6);
-        padding: 0.5rem;
-        border-radius: 6px;
-        overflow: auto;
-    }
-
-    /* Preview area (when using full preview) */
+    /* Preview area */
     .preview-area {
-        background: var(--lavender-100);
-        border: 1px solid rgba(124,58,237,0.06);
+        background: var(--mud-palette-background-grey);
+        border: 1px solid var(--mud-palette-divider);
         border-radius: 8px;
         padding: 1rem;
         min-height: 220px;
@@ -199,75 +218,97 @@
         overflow: auto;
     }
 
-    /* Tags (pills) */
+    /* Tags */
     .tag-pill {
         display: inline-flex;
         align-items: center;
         gap: .5rem;
-        background: var(--lavender-500);
-        color: #fff;
+        background: var(--mud-palette-primary);
+        color: var(--mud-palette-primary-text);
         padding: 0.25rem 0.6rem;
         border-radius: 999px;
         font-size: 0.85rem;
-        border: 1px solid rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
     }
 
         .tag-pill .remove-btn {
             background: transparent;
             border: none;
-            color: rgba(255,255,255,0.95);
+            color: rgba(255,255,255,0.9);
             padding: 0;
             margin-left: .25rem;
             cursor: pointer;
             font-size: 0.85rem;
         }
 
-    /* Popular tags */
     .popular-tag {
-        background: rgba(124,58,237,0.08);
-        color: var(--lavender-600);
+        background: rgba(var(--mud-palette-primary-rgb), 0.1);
+        color: var(--mud-palette-primary);
         padding: 0.25rem 0.6rem;
         border-radius: 999px;
-        border: 1px solid rgba(124,58,237,0.06);
+        border: 1px solid rgba(var(--mud-palette-primary-rgb), 0.2);
         font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
     }
+
+        .popular-tag:hover {
+            background: rgba(var(--mud-palette-primary-rgb), 0.2);
+            transform: translateY(-1px);
+        }
+
+    /* Toolbar */
+    .toolbar-btn {
+        background: rgba(var(--mud-palette-primary-rgb), 0.1);
+        color: var(--mud-palette-primary);
+        border: 1px solid rgba(var(--mud-palette-primary-rgb), 0.2);
+        padding: 0.35rem 0.75rem;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        transition: all 0.2s ease;
+    }
+
+        .toolbar-btn:hover {
+            background: rgba(var(--mud-palette-primary-rgb), 0.2);
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .toolbar-btn i {
+            color: var(--mud-palette-primary);
+        }
 
     /* Validation messages */
     .validation-message {
-        color: #DC2626;
+        color: var(--mud-palette-error);
         font-size: 0.85rem;
         margin-top: .35rem;
     }
 
-    /* Footer actions */
-    .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: .75rem;
-        margin-top: 1.25rem;
-        border-top: 1px solid rgba(15,23,42,0.04);
-        padding-top: 1rem;
-    }
-
-    /* Modal overlays (simple custom) */
+    /* Modal overlays */
     .modal-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(2,6,23,0.6);
+        background: rgba(0, 0, 0, 0.5);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 1050;
         padding: 1rem;
+        backdrop-filter: blur(4px);
     }
 
     .modal-card {
         width: 100%;
         max-width: 520px;
-        background: #fff;
+        background: var(--mud-palette-surface);
         border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(2,6,23,0.2);
+        box-shadow: var(--mud-elevation-24);
         overflow: hidden;
+        border: 1px solid var(--mud-palette-divider);
     }
 
     .cursor-pointer {
@@ -278,36 +319,124 @@
             text-decoration: underline;
         }
 
+    /* Animations */
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
 
+    @@keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
 
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .journal-page {
+            padding: 1rem;
+        }
+
+        .journal-card {
+            padding: 1rem;
+        }
+
+        .actions {
+            flex-direction: column;
+        }
+
+        .btn-lav,
+        .btn-secondary-muted,
+        .btn-danger {
+            width: 100%;
+        }
+    }
 </style>
 
 <div class="journal-page">
     <div class="journal-card">
         <div class="journal-header mb-4">
-            <h1>@(IsEditing ? "Edit Journal Entry" : "New Journal Entry")</h1>
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1>@(IsEditing ? "Edit Journal Entry" : "New Journal Entry")</h1>
 
-            @if (!IsEditingDate)
-            {
-                <p class="small text-muted cursor-pointer"
-                   @onclick="EnableDateEdit"
-                   title="Click to edit date">
-                    <i class="bi bi-calendar3 me-2"></i>
-                    @Date.ToString("dddd, MMMM d, yyyy")
-                </p>
-            }
-            else
-            {
-                <InputDate @bind-Value="Date"
-                           class="form-control form-control-sm d-inline-block w-auto"
-                           @onblur="DisableDateEdit" />
-            }
+                    @if (!IsEditingDate)
+                    {
+                        <p class="small text-muted cursor-pointer"
+                           @onclick="EnableDateEdit"
+                           title="Click to edit date">
+                            <i class="bi bi-calendar3 me-2"></i>
+                            @Date.ToString("dddd, MMMM d, yyyy")
+                        </p>
+                    }
+                    else
+                    {
+                        <InputDate @bind-Value="Date"
+                                   class="form-control form-control-sm d-inline-block w-auto"
+                                   @onblur="DisableDateEdit" />
+                    }
+                </div>
+
+                <!-- Theme switcher button - from settings page -->
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            title="Theme Settings">
+                        <i class="bi @GetThemeIcon()"></i>
+                        <span class="d-none d-md-inline">Theme</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width: 200px;">
+                        <li><h6 class="dropdown-header">Theme Settings</h6></li>
+                        <li class="dropdown-item">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="small">Theme Mode</span>
+                                <MudSelect T="AppTheme" @bind-Value="SelectedTheme"
+                                           Variant="Variant.Outlined"
+                                           Size="Size.Small"
+                                           Style="min-width: 120px;">
+                                    <MudSelectItem Value="AppTheme.Light">Light</MudSelectItem>
+                                    <MudSelectItem Value="AppTheme.Dark">Dark</MudSelectItem>
+                                    <MudSelectItem Value="AppTheme.Black">Black</MudSelectItem>
+                                    <MudSelectItem Value="AppTheme.System">System</MudSelectItem>
+                                </MudSelect>
+                            </div>
+                        </li>
+                        <li class="dropdown-item">
+                            <div class="mb-2">
+                                <span class="small d-block mb-1">Primary Color</span>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var color in ColorOptions)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-sm p-1"
+                                                style="background: @GetColorHex(color.Item1); width: 24px; height: 24px; border-radius: 50%; border: 2px solid @(ThemeService.CurrentSettings.PrimaryColor == color.Item1 ? "#333" : "transparent")"
+                                                @onclick="@(() => SetPrimaryColor(color.Item1))"
+                                                title="@color.Item2">
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <button class="dropdown-item text-danger" @onclick="ResetTheme">
+                                <i class="bi bi-arrow-clockwise me-2"></i>
+                                Reset to Default
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
-
 
         @if (!string.IsNullOrEmpty(ErrorMessage))
         {
-            <div class="mb-3 p-3" style="background:var(--danger-50); border-radius:8px; border:1px solid rgba(239,68,68,0.08);">
+            <div class="mb-3 p-3" style="background: rgba(var(--mud-palette-error-rgb), 0.1); border-radius:8px; border:1px solid rgba(var(--mud-palette-error-rgb), 0.2);">
                 <div class="d-flex align-items-start gap-2">
                     <i class="bi bi-exclamation-triangle text-danger me-2" style="font-size:1.15rem"></i>
                     <div class="small text-danger">@ErrorMessage</div>
@@ -317,7 +446,7 @@
 
         @if (!string.IsNullOrEmpty(SuccessMessage))
         {
-            <div class="mb-3 p-3" style="background:#ECFDF5; border-radius:8px; border:1px solid rgba(34,197,94,0.08);">
+            <div class="mb-3 p-3" style="background: rgba(var(--mud-palette-success-rgb), 0.1); border-radius:8px; border:1px solid rgba(var(--mud-palette-success-rgb), 0.2);">
                 <div class="d-flex align-items-start gap-2">
                     <i class="bi bi-check-circle text-success me-2" style="font-size:1.15rem"></i>
                     <div class="small text-success">@SuccessMessage</div>
@@ -325,8 +454,8 @@
             </div>
         }
         <br />
-        
-    
+
+
 
         <EditForm Model="@Model" OnValidSubmit="@HandleSubmit">
             <DataAnnotationsValidator />
@@ -341,25 +470,22 @@
 
                 <!-- Content -->
                 <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="form-label small fw-semibold mb-0">Content <span class="text-danger">*</span></label>
-                        <button type="button" class="btn btn-sm btn-link text-decoration-none" @onclick="TogglePreview">
-                            @if (ShowPreview)
-                            {
-                                <i class="bi bi-pencil-square me-1"></i>
-                                @* Edit *@
-                                                        }
-                            else
-                            {
-                                <i class="bi bi-eye me-1"></i>
-                                @* Preview *@
-                                                        }
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-sm btn-link text-decoration-none" @onclick="TogglePreview">
+                        @if (ShowPreview)
+                        {
+                            <i class="bi bi-pencil-square me-1"></i>
+                            <span>Edit</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-eye me-1"></i>
+                            <span>Preview</span>
+                        }
+                    </button>
 
                     @if (!ShowPreview)
                     {
-                        <div class="mb-2 p-2" style="border-radius:8px; background: rgba(124,58,237,0.03); border:1px solid rgba(124,58,237,0.04);">
+                        <div class="mb-2 p-2" style="border-radius:8px; background: rgba(var(--mud-palette-primary-rgb), 0.03); border:1px solid rgba(var(--mud-palette-primary-rgb), 0.1);">
                             <div class="d-flex flex-wrap gap-2">
                                 <button type="button" class="toolbar-btn" @onclick="@(() => InsertFormatting("**", "**"))">
                                     <i class="bi bi-type-bold me-1"></i>Bold
@@ -376,31 +502,6 @@
                                     <i class="bi bi-question-circle me-1"></i>Guide
                                 </button>
                             </div>
-
-                            <style>
-                                .toolbar-btn {
-                                    background: linear-gradient(135deg, #4F46E5, #3B82F6); /* gradient blue */
-                                    color: #fff; /* white text */
-                                    border: none;
-                                    padding: 0.35rem 0.75rem;
-                                    border-radius: 0.375rem;
-                                    font-size: 0.875rem;
-                                    display: flex;
-                                    align-items: center;
-                                    gap: 0.25rem;
-                                    transition: transform 0.15s ease, box-shadow 0.15s ease;
-                                }
-
-                                    .toolbar-btn:hover {
-                                        transform: scale(1.05);
-                                        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-                                    }
-
-                                    .toolbar-btn i {
-                                        color: #fff; /* ensure icons are white */
-                                    }
-                            </style>
-
                         </div>
 
                         <div class="editor-wrapper">
@@ -441,27 +542,27 @@
                         <div class="small text-muted"><i class="bi bi-fonts me-1"></i>@WordCount words</div>
                     </div>
                 </div>
-             
+
                 <!-- Moods -->
-                <div class="col-10 border-1" style=" z-index:1000;">
-                    <div class="flex gx-3 gap-5 border-1">
-                        <div class="col-md-4 mb-3 text-black">
-                            <label class="form-label small fw-semibold text-black">Primary Mood <span class="text-danger">*</span></label>
-                            <InputSelect @bind-Value="Model.PrimaryMood" class="form-select custom-select">
+                <div class="col-12">
+                    <div class="row gx-3">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label small fw-semibold">Primary Mood <span class="text-danger">*</span></label>
+                            <InputSelect @bind-Value="Model.PrimaryMood" class="form-select custom-input">
                                 <option value="">Select a mood</option>
-                                <optgroup label="😊 Positive">
+                                <optgroup label=" Positive">
                                     @foreach (var mood in Moods.Positive.GetAll())
                                     {
                                         <option value="@mood">@mood</option>
                                     }
                                 </optgroup>
-                                <optgroup label="😐 Neutral">
+                                <optgroup label="Neutral">
                                     @foreach (var mood in Moods.Neutral.GetAll())
                                     {
                                         <option value="@mood">@mood</option>
                                     }
                                 </optgroup>
-                                <optgroup label="😔 Negative">
+                                <optgroup label="Negative">
                                     @foreach (var mood in Moods.Negative.GetAll())
                                     {
                                         <option value="@mood">@mood</option>
@@ -472,8 +573,8 @@
                         </div>
 
                         <div class="col-md-4 mb-3">
-                            <label class="form-label small fw-semibold  text-black">Secondary Mood 1</label>
-                            <InputSelect @bind-Value="Model.SecondaryMood1" class="form-select custom-select">
+                            <label class="form-label small fw-semibold">Secondary Mood 1</label>
+                            <InputSelect @bind-Value="Model.SecondaryMood1" class="form-select custom-input">
                                 <option value="">None</option>
                                 @foreach (var mood in AllMoods)
                                 {
@@ -483,8 +584,8 @@
                         </div>
 
                         <div class="col-md-4 mb-3">
-                            <label class="form-label small fw-semibold  text-black">Secondary Mood 2</label>
-                            <InputSelect @bind-Value="Model.SecondaryMood2" class="form-select custom-select">
+                            <label class="form-label small fw-semibold">Secondary Mood 2</label>
+                            <InputSelect @bind-Value="Model.SecondaryMood2" class="form-select custom-input">
                                 <option value="">None</option>
                                 @foreach (var mood in AllMoods)
                                 {
@@ -494,42 +595,6 @@
                         </div>
                     </div>
                 </div>
-
-                <style>
-                    /* Modern White Select with Hover Scale */
-                    .custom-select {
-                        background-color: #fff; /* white background */
-                        color: #000; /* black text for readability */
-                        border: 1px solid #ccc; /* subtle border */
-                        border-radius: 0.5rem;
-                        padding: 0.5rem 0.75rem;
-                        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-                        transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-                        appearance: none; /* remove default arrow styling */
-                    }
-
-                        .custom-select option {
-                            color: #000; /* keep dropdown options black */
-                        }
-
-                        .custom-select:focus {
-                            outline: none;
-                            border-color: #8B5CF6; /* lavender accent on focus */
-                            transform: scale(1.02);
-                            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
-                        }
-
-                        .custom-select:hover {
-                            transform: scale(1.02);
-                            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-                        }
-
-                    /* White labels */
-                    .form-label.text-white {
-                        color: #fff !important;
-                    }
-                </style>
-
 
                 <!-- Category & Tags -->
                 <div class="col-12">
@@ -543,7 +608,7 @@
                             <label class="form-label small fw-semibold">Tags</label>
                             <div class="d-flex gap-2 mb-2">
                                 <input type="text" @bind="NewTag" @onkeydown="HandleTagInput" class="form-control custom-input" placeholder="Add tags (press Enter)" />
-                                <button type="button" class="btn btn-lav" @onclick="AddTag" title="Add tag"><i class="bi bi-plus-lg"></i></button>
+                                <button type="button" class="btn-lav" @onclick="AddTag" title="Add tag"><i class="bi bi-plus-lg"></i></button>
                             </div>
 
                             <div class="d-flex flex-wrap gap-2">
@@ -621,7 +686,7 @@
         <div class="modal-card">
             <div class="p-4">
                 <div class="d-flex align-items-center mb-3">
-                    <div style="width:56px;height:56px;border-radius:999px;background:#FFF1F2;display:flex;align-items:center;justify-content:center;margin-right:12px">
+                    <div style="width:56px;height:56px;border-radius:999px;background: rgba(var(--mud-palette-error-rgb), 0.1);display:flex;align-items:center;justify-content:center;margin-right:12px">
                         <i class="bi bi-exclamation-triangle text-danger" style="font-size:1.25rem"></i>
                     </div>
                     <div>
@@ -638,10 +703,13 @@
                         @if (IsLoading)
                         {
                             <i class="bi bi-arrow-clockwise me-2 animate-spin"></i>
-                                        }
+                            <span>Deleting...</span>
+         @* Wrapped in a tag and removed semicolon *@
+                        }
                         else
                         {
-                                        }
+                            <span>Delete</span>
+                        }
                     </button>
                 </div>
             </div>
@@ -663,25 +731,25 @@
                 <div class="row gy-3">
                     <div class="col-md-6">
                         <h6>Text Formatting</h6>
-                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                        <div class="mb-2 p-2" style="background: rgba(var(--mud-palette-background-rgb), 0.5); border-radius:8px">
                             <code>**Bold**</code> — <strong>Bold</strong>
                         </div>
-                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                        <div class="mb-2 p-2" style="background: rgba(var(--mud-palette-background-rgb), 0.5); border-radius:8px">
                             <code>*Italic*</code> — <em>Italic</em>
                         </div>
-                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                        <div class="mb-2 p-2" style="background: rgba(var(--mud-palette-background-rgb), 0.5); border-radius:8px">
                             <code>~~Strike~~</code> — <span style="text-decoration:line-through">Strikethrough</span>
                         </div>
 
                         <h6 class="mt-3">Headings</h6>
-                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                        <div class="mb-2 p-2" style="background: rgba(var(--mud-palette-background-rgb), 0.5); border-radius:8px">
                             <code># Heading 1</code><h3 class="mt-1 mb-0">Heading 1</h3>
                         </div>
                     </div>
 
                     <div class="col-md-6">
                         <h6>Lists & Code</h6>
-                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                        <div class="mb-2 p-2" style="background: rgba(var(--mud-palette-background-rgb), 0.5); border-radius:8px">
                             <code>- Item 1</code><br />
                             <code>- Item 2</code>
                             <ul class="mt-1">
@@ -690,18 +758,18 @@
                             </ul>
                         </div>
 
-                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                        <div class="mb-2 p-2" style="background: rgba(var(--mud-palette-background-rgb), 0.5); border-radius:8px">
                             <code>`inline code`</code> — <code>inline code</code>
                         </div>
 
-                        <div class="mb-2 p-2" style="background:#FAFAFA;border-radius:8px">
+                        <div class="mb-2 p-2" style="background: rgba(var(--mud-palette-background-rgb), 0.5); border-radius:8px">
                             <pre>```<br>code block<br>```</pre>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="p-3" style="border-top:1px solid rgba(15,23,42,0.04);background:var(--lavender-50)">
+            <div class="p-3" style="border-top:1px solid var(--mud-palette-divider);background: var(--mud-palette-background-grey)">
                 <button class="btn-lav w-100" @onclick="@(() => ShowCheatSheet = false)">Got it!</button>
             </div>
         </div>
@@ -709,17 +777,6 @@
 }
 
 @code {
-    private bool IsEditingDate = false;
-
-    private void EnableDateEdit()
-    {
-        IsEditingDate = true;
-    }
-
-    private void DisableDateEdit()
-    {
-        IsEditingDate = false;
-    }
     [Parameter]
     public DateTime Date { get; set; } = DateTime.Today;
 
@@ -728,6 +785,7 @@
     private string NewTag = "";
     private bool IsLoading = false;
     private bool IsEditing = false;
+    private bool IsEditingDate = false;
     private bool ShowDeleteModal = false;
     private bool ShowPreview = false;
     private bool ShowCheatSheet = false;
@@ -735,6 +793,26 @@
     private string SuccessMessage = "";
     private ElementReference textAreaRef;
     private ElementReference mirrorRef;
+
+    // Theme variables - from settings page
+    private bool _isDarkMode = false;
+    private MudTheme _currentTheme = new();
+    private AppTheme SelectedTheme
+    {
+        get => ThemeService.CurrentSettings.Theme;
+        set => ThemeService.SetTheme(value);
+    }
+
+    private List<(string, string)> ColorOptions = new()
+    {
+        ("Primary", "Lavender"),
+        ("Info", "Blue"),
+        ("Success", "Green"),
+        ("Secondary", "Purple"),
+        ("Warning", "Orange"),
+        ("Tertiary", "Teal"),
+        ("Error", "Pink")
+    };
 
     private List<string> AllMoods = Moods.GetAllMoods();
     private List<string> PopularTags = new()
@@ -749,8 +827,121 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadExistingEntry();
+
+        // Initialize theme - from settings page
+        _isDarkMode = ThemeService.IsDarkMode;
+        _currentTheme = GetThemeDefinition();
+        ThemeService.ThemeChanged += OnThemeChanged;
     }
 
+    private void OnThemeChanged(AppTheme theme)
+    {
+        _isDarkMode = ThemeService.IsDarkMode;
+        _currentTheme = GetThemeDefinition();
+        InvokeAsync(StateHasChanged);
+    }
+
+    // Theme-related methods from settings page
+    private MudTheme GetThemeDefinition()
+    {
+        var settings = ThemeService.CurrentSettings;
+
+        if (_isDarkMode)
+        {
+            return new MudTheme()
+            {
+                PaletteDark = new PaletteDark()
+                {
+
+                    Primary = GetColorValue(settings.PrimaryColor),
+                    Secondary = Colors.Teal.Lighten1,
+                    // Changed 'Grey' to 'Gray'
+                    Background = settings.Theme == AppTheme.Black ? Colors.Shades.Black : Colors.Gray.Darken4,
+                    Surface = Colors.Gray.Darken3,
+                    AppbarBackground = settings.Theme == AppTheme.Black ? Colors.Shades.Black : Colors.Gray.Darken4,
+                    TextPrimary = Colors.Shades.White,
+                    TextSecondary = Colors.Gray.Lighten1,
+                }
+            };
+        }
+        else
+        {
+            return new MudTheme()
+            {
+                PaletteLight = new PaletteLight()
+                {
+                    Primary = GetColorValue(settings.PrimaryColor),
+                    Secondary = Colors.Teal.Lighten1,
+                    // Changed 'Grey' to 'Gray'
+                    Background = Colors.Gray.Lighten5,
+                    Surface = Colors.Shades.White,
+                    AppbarBackground = GetColorValue(settings.PrimaryColor),
+                    AppbarText = Colors.Shades.White,
+                    TextPrimary = Colors.Gray.Darken4,
+                    TextSecondary = Colors.Gray.Darken2,
+                }
+            };
+        }
+    }
+
+    
+
+    private string GetColorValue(string colorName)
+    {
+        return colorName.ToLower() switch
+        {
+            "primary" => "#967bb6", // Lavender
+            "info" => "#2196f3",
+            "success" => "#4caf50",
+            "secondary" => "#9c27b0",
+            "warning" => "#ff9800",
+            "tertiary" => "#009688",
+            "error" => "#e91e63",
+            _ => "#967bb6"
+        };
+    }
+
+    private string GetColorHex(string colorName)
+    {
+        return colorName.ToLower() switch
+        {
+            "primary" => "#967bb6",
+            "info" => "#2196f3",
+            "success" => "#4caf50",
+            "secondary" => "#9c27b0",
+            "warning" => "#ff9800",
+            "tertiary" => "#009688",
+            "error" => "#e91e63",
+            _ => "#967bb6"
+        };
+    }
+
+    private string GetThemeIcon()
+    {
+        return ThemeService.CurrentSettings.Theme switch
+        {
+            AppTheme.Light => "bi-sun",
+            AppTheme.Dark => "bi-moon",
+            AppTheme.Black => "bi-moon-stars",
+            AppTheme.System => "bi-gear",
+            _ => "bi-gear"
+        };
+    }
+
+    private async Task SetPrimaryColor(string color)
+    {
+        await ThemeService.SetPrimaryColor(color);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ResetTheme()
+    {
+        ThemeService.ResetToDefault();
+        // You could add a snackbar notification here if you inject ISnackbar
+        InvokeAsync(StateHasChanged);
+    }
+
+    // Rest of the existing methods remain the same...
     protected override async Task OnParametersSetAsync()
     {
         await LoadExistingEntry();
@@ -971,6 +1162,16 @@
         Navigation.NavigateTo("/dashboard");
     }
 
+    private void EnableDateEdit()
+    {
+        IsEditingDate = true;
+    }
+
+    private void DisableDateEdit()
+    {
+        IsEditingDate = false;
+    }
+
     private async Task InsertFormatting(string prefix, string suffix)
     {
         await JS.InvokeVoidAsync("insertText", textAreaRef, prefix, suffix);
@@ -1063,5 +1264,10 @@
             // call setup function passing the element references
             await JS.InvokeVoidAsync("setupEditorMirror", textAreaRef, mirrorRef);
         }
+    }
+
+    public void Dispose()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
     }
 }

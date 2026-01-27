@@ -2,188 +2,165 @@
 @page "/calendar/{Year:int}/{Month:int}"
 @using DailyJournal.Services
 @using DailyJournal.Data.Entities
+@using MudBlazor
 @inject CalendarService CalendarService
+@inject NavigationManager Navigation
 
-<div class="calendar-page">
-    <!-- Header -->
-    <div class="calendar-header">
-        <div class="header-left">
-            <h1 class="page-title">Calendar View</h1>
-            <p class="page-subtitle">Navigate through your journal entries</p>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    @* HEADER SECTION *@
+    <MudGrid Class="mb-6">
+        <MudItem xs="12" sm="8">
+            <MudText Typo="Typo.h3" Color="Color.Primary" Style="font-weight: 800;">Calendar View</MudText>
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">Navigate through your journal entries</MudText>
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-end justify-sm-end">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add" 
+                       OnClick="@(() => Navigation.NavigateTo($"/journal/{DateTime.Today:yyyy-MM-dd}"))">
+                Today's Entry
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+
+    @* CALENDAR NAVIGATION & STATS *@
+    <MudPaper Elevation="2" Class="pa-4 mb-6">
+        <div class="d-flex align-center justify-space-between mb-4">
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" OnClick="GoToPrevMonth" />
+            <MudText Typo="Typo.h5" Align="Align.Center">@CurrentMonthName @Year</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" OnClick="GoToNextMonth" />
         </div>
-        <div class="header-right">
-            <a class="btn-new-entry" href="/journal/@DateTime.Today.ToString("yyyy-MM-dd")">
-                <i class="bi bi-plus-circle"></i> Today's Entry
-            </a>
-        </div>
-    </div>
 
-    <!-- Calendar Navigation -->
-    <div class="calendar-navigation">
-        <div class="nav-controls">
-            <a class="nav-btn" href="/calendar/@PrevMonth.Year/@PrevMonth.Month">
-                <i class="bi bi-chevron-left"></i>
-            </a>
-
-            <div class="current-month">
-                <h2>@CurrentMonthName @Year</h2>
-                @if (MonthStats != null)
+        @if (MonthStats != null)
+        {
+            <MudGrid Justify="Justify.Center" Spacing="2">
+                <MudItem>
+                    <MudChip T="string" Icon="@Icons.Material.Filled.MenuBook" Color="Color.Default">@MonthStats.TotalEntries entries</MudChip>
+                </MudItem>
+                @if (MonthStats.TotalEntries > 0)
                 {
-                    <div class="month-stats">
-                        <span class="stat-item">
-                            <i class="bi bi-journal-text"></i> @MonthStats.TotalEntries entries
-                        </span>
-                        @if (MonthStats.TotalEntries > 0)
-                        {
-                            <span class="stat-item positive">
-                                <i class="bi bi-emoji-smile"></i> @MonthStats.PositiveDays days
-                            </span>
-                            <span class="stat-item neutral">
-                                <i class="bi bi-emoji-neutral"></i> @MonthStats.NeutralDays days
-                            </span>
-                            <span class="stat-item negative">
-                                <i class="bi bi-emoji-frown"></i> @MonthStats.NegativeDays days
-                            </span>
-                        }
-                    </div>
+                    <MudItem><MudChip T="string" Icon="@Icons.Material.Filled.SentimentSatisfied" Color="Color.Success">@MonthStats.PositiveDays days</MudChip></MudItem>
+                    <MudItem><MudChip T="string" Icon="@Icons.Material.Filled.SentimentNeutral" Color="Color.Warning">@MonthStats.NeutralDays days</MudChip></MudItem>
+                    <MudItem><MudChip T="string" Icon="@Icons.Material.Filled.SentimentDissatisfied" Color="Color.Error">@MonthStats.NegativeDays days</MudChip></MudItem>
                 }
-            </div>
+            </MudGrid>
+        }
+    </MudPaper>
 
-            <a class="nav-btn" href="/calendar/@NextMonth.Year/@NextMonth.Month">
-                <i class="bi bi-chevron-right"></i>
-            </a>
-        </div>
-    </div>
-
-    <!-- Calendar Grid -->
-    <div class="calendar-container">
-        <div class="weekdays">
-            @foreach (var dayName in weekdays)
-            {
-                <div class="weekday">@dayName</div>
-            }
-        </div>
-
-        <div class="calendar-grid">
-            @if (DaysList != null)
-            {
-                @for (int i = 0; i < DaysList.Count; i++)
-                {
-                    var day = DaysList[i];
-                    var isSelected = SelectedDate.HasValue && SelectedDate.Value.Date == day.Date.Date;
-                    var journalUrl = $"/journal/{day.Date:yyyy-MM-dd}";
-
-                    <div class="calendar-day @(day.IsCurrentMonth ? "" : "other-month")
-                                                  @(day.IsToday ? "today" : "")
-                                                  @(isSelected ? "selected" : "")"
-                         data-date="@day.Date.ToString("yyyy-MM-dd")"
-                         @onclick="() => HandleDayClick(day)">
-
-                        <div class="day-header">
-                            <span class="day-number">@day.Date.Day</span>
-                            @if (day.IsToday)
-                            {
-                                <span class="today-badge">Today</span>
-                            }
-                        </div>
-
-                        @if (day.HasEntry)
-                        {
-                            <div class="day-content">
-                                <div class="mood-indicator" style="background-color: @GetMoodColor(day.PrimaryMood)"></div>
-                                @if (day.IsFavorite)
-                                {
-                                    <i class="bi bi-star-fill favorite-star"></i>
-                                }
-                                @if (day.WordCount > 0)
-                                {
-                                    <div class="word-count">
-                                        @day.WordCount
-                                    </div>
-                                }
-                            </div>
-
-                            <!-- Clickable overlay for entry days -->
-                            <a class="day-link" href="@journalUrl"></a>
-                        }
-                        else if (day.IsCurrentMonth)
-                        {
-                            <div class="day-empty">
-                                <a class="add-entry-btn" href="@journalUrl">
-                                    <i class="bi bi-plus"></i>
-                                </a>
-                            </div>
-                        }
-                    </div>
-                }
-            }
-        </div>
-    </div>
-
-    <!-- Selected Date Details -->
-    @if (SelectedDate.HasValue)
-    {
-        <div class="selected-date-details">
-            <h3>
-                @SelectedDate.Value.ToString("dddd, MMMM dd, yyyy")
-                @if (IsTodaySelected)
-                {
-                    <span class="today-label">TODAY</span>
-                }
-            </h3>
-
-            @if (SelectedDateEntry != null)
-            {
-                <div class="entry-preview">
-                    <div class="entry-header">
-                        <h4>@SelectedDateEntry.Title</h4>
-                        <div class="entry-actions">
-                            <a class="icon-btn edit" href="/journal/@SelectedDate.Value.ToString("yyyy-MM-dd")">
-                                <i class="bi bi-pencil"></i> Edit
-                            </a>
-                            <a class="icon-btn view" href="/entry/@SelectedDateEntry.Id">
-                                <i class="bi bi-eye"></i> View
-                            </a>
-                        </div>
-                    </div>
-
-                    @if (!string.IsNullOrEmpty(SelectedDateEntry.PrimaryMood))
+    <MudGrid>
+        @* CALENDAR GRID *@
+        <MudItem xs="12" md="8">
+            <MudPaper Elevation="2" Class="pa-2">
+                @* Weekday Headers *@
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center;" class="mb-2">
+                    @foreach (var day in weekdays)
                     {
-                        <div class="entry-moods">
-                            <span class="mood-tag primary" style="background-color: @GetMoodColor(SelectedDateEntry.PrimaryMood)">
-                                @SelectedDateEntry.PrimaryMood
-                            </span>
+                        <MudText Typo="Typo.caption" Style="font-weight: bold; text-transform: uppercase;">@day</MudText>
+                    }
+                </div>
+
+                @* Day Grid *@
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                    @foreach (var day in DaysList)
+                    {
+                        bool isSelected = SelectedDate?.Date == day.Date.Date;
+                        <MudPaper Elevation="0" 
+                                  Class="@GetDayClass(day, isSelected)"
+                                  Style="@GetDayStyle(day, isSelected)"
+                                  @onclick="() => HandleDayClick(day)">
+                            
+                            <div class="d-flex justify-space-between align-start">
+                                <MudText Typo="Typo.body2" Style="font-weight: bold;">@day.Date.Day</MudText>
+                                @if (day.IsToday)
+                                {
+                                    <MudBadge Color="Color.Primary" Dot="true" Overlap="true" />
+                                }
+                            </div>
+
+                            <div class="d-flex flex-column align-center justify-center mt-2" style="min-height: 40px;">
+                                @if (day.HasEntry)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Circle" 
+                                             Size="Size.Small" 
+                                             Style="@($"color: {GetMoodColor(day.PrimaryMood)};")" />
+                                    @if (day.IsFavorite)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Star" Color="Color.Warning" Size="Size.Small" />
+                                    }
+                                }
+                                else if (day.IsCurrentMonth)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="pa-0 opacity-50" 
+                                                   Href="@($"/journal/{day.Date:yyyy-MM-dd}")" />
+                                }
+                            </div>
+                        </MudPaper>
+                    }
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        @* SELECTED DATE DETAILS *@
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="2" Class="pa-6" Style="height: 100%; min-height: 400px;">
+                @if (SelectedDate.HasValue)
+                {
+                    <MudText Typo="Typo.h6" GutterBottom="true">
+                        @SelectedDate.Value.ToString("ddd, MMM dd")
+                        @if (IsTodaySelected) { <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ml-2">TODAY</MudChip> }
+                    </MudText>
+
+                    @if (SelectedDateEntry != null)
+                    {
+                        <MudText Typo="Typo.h5" Class="mt-4">@SelectedDateEntry.Title</MudText>
+                        <MudChip T="string" Color="@GetMoodMudColor(SelectedDateEntry.PrimaryMood)" Size="Size.Small" Class="mt-2">
+                            @SelectedDateEntry.PrimaryMood
+                        </MudChip>
+
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-4 mb-6">
+                            @GetContentPreview(SelectedDateEntry.Content)
+                        </MudText>
+
+                        <div class="d-flex gap-4 mb-6">
+                            <MudText Typo="Typo.caption"><MudIcon Icon="@Icons.Material.Filled.TextFields" Size="Size.Small" /> @SelectedDateEntry.WordCount words</MudText>
+                            <MudText Typo="Typo.caption"><MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" /> @SelectedDateEntry.UpdatedAt.ToString("t")</MudText>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Href="@($"/journal/{SelectedDate.Value:yyyy-MM-dd}")">Edit</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" FullWidth="true" Href="@($"/entry/{SelectedDateEntry.Id}")">View</MudButton>
                         </div>
                     }
+                    else
+                    {
+                        <div class="d-flex flex-column align-center justify-center py-10 opacity-70">
+                            <MudIcon Icon="@Icons.Material.Filled.EventBusy" Style="font-size: 3rem;" Class="mb-4" />
+                            <MudText Typo="Typo.body1">No entry for this day</MudText>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4" Href="@($"/journal/{SelectedDate.Value:yyyy-MM-dd}")">Write Now</MudButton>
+                        </div>
+                    }
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
 
-                    <p class="entry-content-preview">
-                        @GetContentPreview(SelectedDateEntry.Content)
-                    </p>
-
-                    <div class="entry-stats">
-                        <span class="stat">
-                            <i class="bi bi-fonts"></i> @SelectedDateEntry.WordCount words
-                        </span>
-                        <span class="stat">
-                            <i class="bi bi-clock"></i> @SelectedDateEntry.UpdatedAt.ToString("h:mm tt")
-                        </span>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="no-entry">
-                    <i class="bi bi-journal-x"></i>
-                    <h4>No entry for this day</h4>
-                    <p>This day is waiting for your story.</p>
-                    <a class="btn-new-entry" href="/journal/@SelectedDate.Value.ToString("yyyy-MM-dd")">
-                        <i class="bi bi-plus-circle"></i> Write Entry
-                    </a>
-                </div>
-            }
-        </div>
+<style>
+    .calendar-day-box {
+        padding: 8px;
+        min-height: 85px;
+        border: 1px solid var(--mud-palette-divider);
+        cursor: pointer;
+        transition: background 0.2s;
+        border-radius: 4px;
     }
-</div>
+    .calendar-day-box:hover {
+        background-color: var(--mud-palette-action-default-hover);
+    }
+    .day-other-month { opacity: 0.3; }
+    .day-selected { border: 2px solid var(--mud-palette-primary) !important; background-color: var(--mud-palette-primary-hover) !important; }
+    .day-today { background-color: var(--mud-palette-info-hover); }
+</style>
 
 @code {
     [Parameter] public int Year { get; set; }
@@ -191,622 +168,69 @@
 
     private List<CalendarService.CalendarDay> DaysList = new();
     private CalendarService.CalendarMonth MonthStats = new();
-    private DateTime? SelectedDate = null;
+    private DateTime? SelectedDate = DateTime.Today;
     private JournalEntry? SelectedDateEntry = null;
-    private bool IsLoading = true;
 
     private string[] weekdays = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
     private string CurrentMonthName => new DateTime(Year, Month, 1).ToString("MMMM");
     private bool IsTodaySelected => SelectedDate?.Date == DateTime.Today.Date;
 
-    private DateTime PrevMonth => new DateTime(Year, Month, 1).AddMonths(-1);
-    private DateTime NextMonth => new DateTime(Year, Month, 1).AddMonths(1);
-
     protected override async Task OnInitializedAsync()
     {
         if (Year == 0) Year = DateTime.Today.Year;
         if (Month == 0) Month = DateTime.Today.Month;
-
         await LoadData();
     }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        if (Year == 0 || Month == 0) return;
-        await LoadData();
-    }
+    protected override async Task OnParametersSetAsync() => await LoadData();
 
     private async Task LoadData()
     {
-        IsLoading = true;
-
-        try
-        {
-            var userId = 1; // Replace with actual user ID
-
-            // Load calendar data
-            var calendarData = await CalendarService.GetCalendarMonthAsync(userId, Year, Month);
-            DaysList = calendarData.Days;
-            MonthStats = calendarData;
-
-            // Initialize selected date
-            if (!SelectedDate.HasValue ||
-                SelectedDate.Value.Year != Year ||
-                SelectedDate.Value.Month != Month)
-            {
-                SelectedDate = DateTime.Today;
-                if (SelectedDate.Value.Year != Year || SelectedDate.Value.Month != Month)
-                {
-                    SelectedDate = new DateTime(Year, Month, 1);
-                }
-            }
-
-            // Load selected date entry
-            if (SelectedDate.HasValue)
-            {
-                SelectedDateEntry = await CalendarService.GetEntryByDateAsync(userId, SelectedDate.Value);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading calendar: {ex.Message}");
-        }
-        finally
-        {
-            IsLoading = false;
-            StateHasChanged();
-        }
+        var calendarData = await CalendarService.GetCalendarMonthAsync(1, Year, Month);
+        DaysList = calendarData.Days;
+        MonthStats = calendarData;
+        SelectedDateEntry = await CalendarService.GetEntryByDateAsync(1, SelectedDate ?? DateTime.Today);
     }
 
     private async Task HandleDayClick(CalendarService.CalendarDay day)
     {
-        // Update selected date locally (no navigation)
         SelectedDate = day.Date;
-
-        var userId = 1; // Replace with actual user ID
-        SelectedDateEntry = await CalendarService.GetEntryByDateAsync(userId, day.Date);
-
-        StateHasChanged();
+        SelectedDateEntry = await CalendarService.GetEntryByDateAsync(1, day.Date);
     }
+
+    private void GoToPrevMonth() => Navigation.NavigateTo($"/calendar/{new DateTime(Year, Month, 1).AddMonths(-1):yyyy/MM}");
+    private void GoToNextMonth() => Navigation.NavigateTo($"/calendar/{new DateTime(Year, Month, 1).AddMonths(1):yyyy/MM}");
+
+    private string GetDayClass(CalendarService.CalendarDay day, bool selected)
+    {
+        var classes = "calendar-day-box";
+        if (!day.IsCurrentMonth) classes += " day-other-month";
+        if (selected) classes += " day-selected";
+        if (day.IsToday) classes += " day-today";
+        return classes;
+    }
+
+    private string GetDayStyle(CalendarService.CalendarDay day, bool selected) => "";
 
     private string GetMoodColor(string? mood)
     {
-        if (string.IsNullOrEmpty(mood)) return "#e2e8f0";
+        if (string.IsNullOrEmpty(mood)) return "#bdbdbd";
+        var positive = new[] { "Happy", "Excited", "Grateful", "Content" };
+        if (positive.Any(m => mood.Contains(m, StringComparison.OrdinalIgnoreCase))) return "#4caf50";
+        return "#f44336";
+    }
 
-        var positiveMoods = new[] { "Happy", "Excited", "Grateful", "Content", "Proud", "Hopeful" };
-        var negativeMoods = new[] { "Sad", "Angry", "Anxious", "Stressed", "Lonely", "Tired", "Frustrated" };
-
-        if (positiveMoods.Contains(mood, StringComparer.OrdinalIgnoreCase))
-            return "#10b981"; // Green
-
-        if (negativeMoods.Contains(mood, StringComparer.OrdinalIgnoreCase))
-            return "#ef4444"; // Red
-
-        return "#f59e0b"; // Orange/Yellow for neutral
+    private Color GetMoodMudColor(string? mood)
+    {
+        if (string.IsNullOrEmpty(mood)) return Color.Default;
+        var positive = new[] { "Happy", "Excited", "Grateful", "Content" };
+        return positive.Any(m => mood.Contains(m, StringComparison.OrdinalIgnoreCase)) ? Color.Success : Color.Error;
     }
 
     private string GetContentPreview(string? content)
     {
-        if (string.IsNullOrEmpty(content))
-            return "No content available";
-
-        // Remove markdown and special characters
+        if (string.IsNullOrEmpty(content)) return "No content.";
         var plainText = System.Text.RegularExpressions.Regex.Replace(content, @"[#*_`\[\]()]", "");
-
-        // Return first 150 characters
-        return plainText.Length > 150 ? plainText.Substring(0, 150) + "..." : plainText;
+        return plainText.Length > 100 ? plainText.Substring(0, 100) + "..." : plainText;
     }
 }
-
-<style>
-    /* ===== BASE STYLES ===== */
-    .calendar-page {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 2rem 1rem;
-        font-family: 'Inter', -apple-system, sans-serif;
-    }
-
-    /* ===== HEADER ===== */
-    .calendar-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 2rem;
-        padding-bottom: 1.5rem;
-        border-bottom: 2px solid #e2e8f0;
-    }
-
-    .header-left {
-        flex: 1;
-    }
-
-    .page-title {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: #0f172a;
-        margin: 0 0 0.5rem 0;
-    }
-
-    .page-subtitle {
-        color: #64748b;
-        font-size: 1.1rem;
-        margin: 0;
-    }
-
-    .btn-new-entry {
-        background: #6366f1;
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 1rem;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: transform 0.2s, box-shadow 0.2s;
-        text-decoration: none;
-    }
-
-        .btn-new-entry:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-        }
-
-    /* ===== CALENDAR NAVIGATION ===== */
-    .calendar-navigation {
-        background: white;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .nav-controls {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 1.5rem;
-    }
-
-    .nav-btn {
-        background: white;
-        border: 2px solid #e2e8f0;
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.2s;
-        color: #0f172a;
-        text-decoration: none;
-    }
-
-        .nav-btn:hover {
-            border-color: #6366f1;
-            background: #eef2ff;
-            color: #6366f1;
-        }
-
-    .current-month {
-        text-align: center;
-    }
-
-        .current-month h2 {
-            font-size: 1.75rem;
-            color: #0f172a;
-            margin: 0 0 1rem 0;
-        }
-
-    .month-stats {
-        display: flex;
-        justify-content: center;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-    }
-
-    .stat-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: #64748b;
-        font-size: 0.9rem;
-    }
-
-        .stat-item.positive {
-            color: #10b981;
-        }
-
-        .stat-item.neutral {
-            color: #f59e0b;
-        }
-
-        .stat-item.negative {
-            color: #ef4444;
-        }
-
-    /* ===== CALENDAR GRID ===== */
-    .calendar-container {
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        margin-bottom: 2rem;
-        position: relative;
-    }
-
-    .weekdays {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        background: #f8fafc;
-        border-bottom: 1px solid #e2e8f0;
-    }
-
-    .weekday {
-        padding: 1rem;
-        text-align: center;
-        font-weight: 600;
-        color: #0f172a;
-        text-transform: uppercase;
-        font-size: 0.85rem;
-        letter-spacing: 0.05em;
-    }
-
-    .calendar-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 1px;
-        background: #e2e8f0;
-    }
-
-    .calendar-day {
-        background: white;
-        padding: 1rem;
-        min-height: 120px;
-        position: relative;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-        .calendar-day:hover {
-            background: #f8fafc;
-            transform: translateY(-1px);
-            z-index: 1;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .calendar-day.other-month {
-            background: #fafafa;
-            color: #94a3b8;
-        }
-
-        .calendar-day.today {
-            background: #eef2ff;
-            border: 2px solid #6366f1;
-        }
-
-        .calendar-day.selected {
-            background: #e0e7ff;
-            border: 2px solid #6366f1;
-        }
-
-    .day-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-        position: relative;
-        z-index: 2;
-    }
-
-    .day-number {
-        font-weight: 600;
-        color: #0f172a;
-        font-size: 1.1rem;
-    }
-
-    .today-badge {
-        background: #6366f1;
-        color: white;
-        font-size: 0.7rem;
-        padding: 0.1rem 0.4rem;
-        border-radius: 4px;
-        font-weight: 600;
-    }
-
-    .day-content {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        position: relative;
-        z-index: 2;
-    }
-
-    .mood-indicator {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        align-self: flex-start;
-    }
-
-    .favorite-star {
-        color: #f59e0b;
-        font-size: 0.9rem;
-    }
-
-    .word-count {
-        font-size: 0.8rem;
-        color: #64748b;
-        background: #f1f5f9;
-        padding: 0.1rem 0.4rem;
-        border-radius: 4px;
-        align-self: flex-start;
-    }
-
-    .day-empty {
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        z-index: 2;
-    }
-
-    .add-entry-btn {
-        background: white;
-        border: 2px dashed #cbd5e1;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        color: #94a3b8;
-        transition: all 0.2s;
-        text-decoration: none;
-    }
-
-        .add-entry-btn:hover {
-            border-color: #6366f1;
-            color: #6366f1;
-            background: #eef2ff;
-        }
-
-    /* Clickable overlay for entry days */
-    .day-link {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 1;
-        cursor: pointer;
-        text-decoration: none;
-    }
-
-    /* ===== SELECTED DATE DETAILS ===== */
-    .selected-date-details {
-        background: white;
-        border-radius: 12px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-        .selected-date-details h3 {
-            margin: 0 0 1.5rem 0;
-            color: #0f172a;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-    .today-label {
-        background: #6366f1;
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-
-    .entry-preview {
-        background: #f8fafc;
-        border-radius: 8px;
-        padding: 1.5rem;
-    }
-
-    .entry-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 1rem;
-    }
-
-        .entry-header h4 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 1.25rem;
-        }
-
-    .entry-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .icon-btn {
-        padding: 0.5rem 1rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        background: white;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-        transition: all 0.2s;
-        text-decoration: none;
-        color: #0f172a;
-    }
-
-        .icon-btn.edit:hover {
-            border-color: #6366f1;
-            color: #6366f1;
-            background: #eef2ff;
-        }
-
-        .icon-btn.view:hover {
-            border-color: #10b981;
-            color: #10b981;
-            background: #ecfdf5;
-        }
-
-    .entry-moods {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .mood-tag {
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: white;
-    }
-
-        .mood-tag.secondary {
-            background: #f1f5f9;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-        }
-
-    .entry-content-preview {
-        color: #64748b;
-        line-height: 1.6;
-        margin-bottom: 1rem;
-    }
-
-    .entry-stats {
-        display: flex;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-    }
-
-    .stat {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: #64748b;
-        font-size: 0.85rem;
-    }
-
-    .no-entry {
-        text-align: center;
-        padding: 3rem 2rem;
-        color: #64748b;
-    }
-
-        .no-entry i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            color: #cbd5e1;
-        }
-
-        .no-entry h4 {
-            color: #0f172a;
-            margin: 0 0 0.5rem 0;
-        }
-
-        .no-entry p {
-            margin: 0 0 1.5rem 0;
-        }
-
-    /* ===== LOADING STATE ===== */
-    .loading-container {
-        text-align: center;
-        padding: 4rem 2rem;
-    }
-
-    .spinner {
-        border: 3px solid #e2e8f0;
-        border-top: 3px solid #6366f1;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 1rem;
-    }
-
-    @@keyframes spin {
-        0% {
-            transform: rotate(0deg);
-        }
-
-        100% {
-            transform: rotate(360deg);
-        }
-    }
-
-    /* ===== RESPONSIVE DESIGN ===== */
-    @@media (max-width: 768px) {
-        .calendar-header {
-            flex-direction: column;
-            gap: 1rem;
-            align-items: stretch;
-        }
-
-        .calendar-grid {
-            grid-template-columns: repeat(7, 1fr);
-        }
-
-        .calendar-day {
-            min-height: 80px;
-            padding: 0.5rem;
-        }
-
-        .weekday {
-            padding: 0.5rem;
-            font-size: 0.8rem;
-        }
-
-        .entry-header {
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .entry-actions {
-            width: 100%;
-            justify-content: flex-start;
-        }
-    }
-
-    /* ===== FIX FOR CLICK ISSUES ===== */
-    .calendar-day, .nav-btn, .btn-new-entry, .add-entry-btn, .icon-btn {
-        cursor: pointer !important;
-        user-select: none;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-    }
-
-    a, button {
-        text-decoration: none;
-    }
-
-    /* Ensure click events work properly */
-    .calendar-page * {
-        pointer-events: auto;
-    }
-
-    /* Disable text selection on clickable elements */
-    .calendar-day, .nav-btn, .btn-new-entry {
-        -webkit-tap-highlight-color: transparent;
-    }
-</style>

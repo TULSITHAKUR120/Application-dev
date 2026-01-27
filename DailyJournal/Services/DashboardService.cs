@@ -381,3 +381,4 @@ namespace DailyJournal.Services
         public int AverageWordCount { get; set; }
     }
 }
+

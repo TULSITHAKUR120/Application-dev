@@ -37,3 +37,4 @@ namespace DailyJournal.Data.Entities
         public User User { get; set; } = null!;
     }
 }
+
