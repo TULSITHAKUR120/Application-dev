@@ -103,7 +103,7 @@ namespace DailyJournal.Services
         {
             var effectiveTheme = GetEffectiveTheme();
 
-            // 1. Update Native MAUI (Status bars, etc.)
+            // Updating Native MAUI (Status bars, etc.)
             if (Application.Current != null)
             {
                 Application.Current.UserAppTheme = effectiveTheme switch
@@ -115,7 +115,7 @@ namespace DailyJournal.Services
                 };
             }
 
-            // 2. Update CSS for OLED Black
+            //  Update CSS for OLED Black
             var bodyClass = effectiveTheme == AppTheme.Black ? "theme-black" : "";
             try
             {

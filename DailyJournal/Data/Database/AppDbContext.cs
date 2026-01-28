@@ -5,13 +5,13 @@ namespace DailyJournal.Data.Database;
 
 public class AppDbContext : DbContext
 {
-    // ✅ Constructor for dependency injection (used in MauiProgram)
+    // Constructor for dependency injection (used in MauiProgram)
     public AppDbContext(DbContextOptions<AppDbContext> options)
         : base(options)
     {
     }
 
-    // ❌ Remove parameterless constructor for runtime MAUI apps
+    //  Remove parameterless constructor for runtime MAUI apps
     // Design-time migrations can use IDesignTimeDbContextFactory instead
 
     // DbSets
@@ -23,7 +23,7 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // ===== User Configuration =====
+        // User Configuration 
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -70,7 +70,7 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // ===== UserSettings Configuration =====
+        //  UserSettings Configuration 
         modelBuilder.Entity<UserSettings>(entity =>
         {
             entity.HasKey(e => e.Id);
